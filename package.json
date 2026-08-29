@@ -1,0 +1,25 @@
+{
+  "name": "labddb-uprint-pitch",
+  "version": "2.0.0",
+  "private": true,
+  "description": "CU cover-page generator that mints real UprintBD kiosk OTPs by automating UprintBD's existing web flow — no API required. Students pay only for pages that actually printed.",
+  "main": "server.js",
+  "scripts": {
+
+    "start": "node server.js",
+    "dev": "node server.js",
+    "deploy": "npx wrangler deploy",
+    "dev:worker": "npx wrangler dev",
+    "test": "node scripts/test-ledger.js",
+    "test:ledger": "node scripts/test-ledger.js",
+    "test:audit": "node scripts/test-audit.js",
+    "verify": "node scripts/mobile-verify.js",
+    "smoke": "node scripts/smoke-test.js",
+    "test:http": "node scripts/http-test.js",
+    "verify:clean": "node scripts/verify-clean.js"
+  },
+  "engines": {
+    "node": ">=20"
+  },
+  "dependencies": {}
+}

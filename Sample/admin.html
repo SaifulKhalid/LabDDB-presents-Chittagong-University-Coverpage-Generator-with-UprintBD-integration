@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#037d73">
+    <title>CU | Admin Panel</title>
+    <link rel="icon" href="culogo.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts link removed for independence -->
+
+    <style>
+        /* ==========================================================================
+           COMMON HEADER (inline in case css/styles.css doesn't have it)
+           ========================================================================== */
+        #mainHeader {
+            background: #ffffff;
+            border-bottom: 1px solid #e2e8f0;
+            z-index: 50;
+            position: relative;
+            flex-shrink: 0;
+        }
+        @media (min-width: 768px) {
+            #mainHeader {
+                position: sticky;
+                top: 0;
+                box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+            }
+        }
+        .header-container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 10px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 16px;
+            min-height: 56px;
+        }
+        .header-logo-link {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            text-decoration: none;
+            color: #1e293b;
+            flex-shrink: 0;
+        }
+        .header-logo-link:hover { opacity: 0.85; }
+        .header-logo { width: 36px; height: auto; }
+        .header-site-name { font-size: 17px; font-weight: 700; color: #037d73; letter-spacing: -0.3px; }
+        .header-desktop-nav { display: none; align-items: center; gap: 6px; }
+        @media (min-width: 768px) { .header-desktop-nav { display: flex; } }.header-desktop-nav-item { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: 8px;
+            color: #475569; font-size: 13px; font-weight: 500;
+            white-space: nowrap; cursor: default;
+        }
+        .header-desktop-nav-item:hover { background: #e0f2f1; color: #037d73; }
+        .header-desktop-nav-item i { font-size: 13px; }
+        .header-mobile-menu-btn {
+            display: flex; align-items: center; justify-content: center;
+            width: 40px; height: 40px; background: transparent;
+            border: 2px solid #e2e8f0; border-radius: 8px;
+            color: #1e293b; font-size: 18px; cursor: pointer;
+            transition: all 0.2s; -webkit-tap-highlight-color: transparent;
+        }
+        .header-mobile-menu-btn:hover { border-color: #037d73; color: #037d73; }
+        .header-mobile-menu-btn:active { background: #e0f2f1; transform: scale(0.95); }
+        @media (min-width: 768px) { .header-mobile-menu-btn { display: none; } }
+        .header-mobile-menu {
+            position: fixed; top: 0; right: -320px; width: 300px; max-width: 85vw;
+            height: 100vh; height: 100dvh; background: #ffffff; z-index: 60;
+            box-shadow: -4px 0 20px rgba(0,0,0,0.15);
+            transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            display: flex; flex-direction: column; padding: 0;
+        }
+        .header-mobile-menu.open { right: 0; }
+        .header-mobile-menu-top {
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 16px 20px; border-bottom: 1px solid #e2e8f0;
+        }
+        .header-mobile-menu-top .header-site-name { font-size: 17px; font-weight: 700; color: #037d73; }
+        .header-mobile-menu-close {
+            width: 36px; height: 36px; border-radius: 50%; border: 2px solid #e2e8f0;
+            background: transparent; color: #1e293b; font-size: 16px; cursor: pointer;
+            display: flex; align-items: center; justify-content: center; transition: all 0.2s;
+        }
+        .header-mobile-menu-close:hover { background: #fef2f2; border-color: #ef4444; color: #ef4444; }
+        .header-mobile-menu nav { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 4px; }.header-mobile-nav-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px;
+            border-radius: 10px; color: #1e293b;
+            font-size: 15px; font-weight: 500; cursor: default;
+        }
+        .header-mobile-nav-item:hover { background: #e0f2f1; color: #037d73; }
+        .header-mobile-nav-item i { font-size: 16px; width: 22px; text-align: center; }
+        .header-overlay {
+            display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4);
+            z-index: 55; opacity: 0; transition: opacity 0.3s;
+        }
+        .header-overlay.show { display: block; opacity: 1; }
+    </style>
+  <!-- Google Analytics removed for independence -->
+</head>
+<body>
+
+    <!-- ==================================================================
+         COMMON HEADER
+         ================================================================== -->
+    <header id="mainHeader">
+        <div class="header-container">
+            <div class="header-logo-link">
+                <img src="culogo.png" alt="CU logo" class="header-logo" onerror="this.style.display='none'">
+            </div>
+            <nav class="header-desktop-nav">
+                <span class="header-desktop-nav-item"><i class="fas fa-tools"></i> Tools</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+            <button class="header-mobile-menu-btn" aria-label="Open menu">
+                <i class="fas fa-bars"></i>
+            </button>
+        </div>
+        <div class="header-mobile-menu" id="headerMobileMenu">
+            <div class="header-mobile-menu-top">
+                <span class="header-site-name">Chittagong University</span>
+                <button class="header-mobile-menu-close" aria-label="Close menu">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <nav>
+                <span class="header-mobile-nav-item"><i class="fas fa-tools"></i> All Tools</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+        </div>
+        <div class="header-overlay" id="headerOverlay"></div>
+    </header>
+
+    <!-- Notification Container -->
+    <div id="notificationContainer" class="notification-container"></div>
+
+    <div class="container admin-container">
+        <div class="university-header">
+            <img src="culogo.png" alt="University Logo" class="university-logo">
+            <div>
+                <h2 class="form-title">Admin Panel</h2>
+            </div>
+        </div>
+
+        <!-- Counter Display -->
+        <div class="counter-display">
+            Total Cover Pages Generated: <span id="coverpageCount" class="counter-number">0</span>
+        </div>
+
+        <div class="admin-nav">
+            <button class="active" data-tab="viewCourses">View Courses</button>
+            <button data-tab="addCourse">Add Course</button>
+            <button data-tab="editCourse">Edit Course</button>
+            <button data-tab="viewStudents">View Students</button>
+            <button data-tab="addStudent">Add Student</button>
+            <button data-tab="editStudent">Edit Student</button>
+            <button data-tab="assignmentManagement">Assignment Management</button>
+        </div>
+
+        <!-- View Courses Section -->
+        <div id="viewCourses" class="admin-section active">
+            <div class="form-container">
+                <h3 class="form-title">All Courses</h3>
+                <div id="courseList" class="course-list">
+                    <div class="loading">Loading courses...</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Add Course Section -->
+        <div id="addCourse" class="admin-section">
+            <div class="form-container">
+                <h3 class="form-title">Add New Course</h3>
+                <form id="addCourseForm">
+                    <div class="form-group">
+                        <label for="courseCode">Course Code *</label>
+                        <input type="text" id="courseCode" name="courseCode" required placeholder="e.g., EEE418">
+                    </div>
+                    <div class="form-group">
+                        <label for="courseTitle">Course Title *</label>
+                        <input type="text" id="courseTitle" name="courseTitle" required placeholder="e.g., Laboratory on Control System">
+                    </div>
+                    <div class="form-group">
+                        <label for="department">Department *</label>
+                        <select id="department" name="department" required>
+                            <option value="" disabled selected>Loading departments...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="courseType">Course Type *</label>
+                        <select id="courseType" name="courseType" required>
+                            <option value="" disabled selected>Select course type</option>
+                            <option value="lab">Lab Course</option>
+                            <option value="theory">Theory Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Faculty Members</label>
+                        <div id="addFacultyContainer" class="faculty-management"></div>
+                        <button type="button" class="fm-add-btn" id="addFacultyBtn">+ Add Faculty Member</button>
+                        <small class="fm-hint">Add up to 4 faculty members for this course.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="semesterText">Semester Text</label>
+                        <input type="text" id="semesterText" name="semesterText" placeholder="e.g., 4th Semester B.Sc Engineering">
+                    </div>
+                    <button type="submit" class="generate-btn">Add Course</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Course Section -->
+        <div id="editCourse" class="admin-section">
+            <div class="form-container">
+                <h3 class="form-title">Edit Course</h3>
+                <form id="editCourseForm">
+                    <div class="form-group">
+                        <label for="editCourseCode">Course Code</label>
+                        <input type="text" id="editCourseCode" name="editCourseCode" disabled>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCourseTitle">Course Title *</label>
+                        <input type="text" id="editCourseTitle" name="editCourseTitle" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="editDepartment">Department *</label>
+                        <select id="editDepartment" name="editDepartment" required>
+                            <option value="" disabled selected>Loading departments...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="editCourseType">Course Type *</label>
+                        <select id="editCourseType" name="editCourseType" required>
+                            <option value="" disabled selected>Select course type</option>
+                            <option value="lab">Lab Course</option>
+                            <option value="theory">Theory Course</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Faculty Members</label>
+                        <div id="editFacultyContainer" class="faculty-management"></div>
+                        <button type="button" class="fm-add-btn" id="editAddFacultyBtn">+ Add Faculty Member</button>
+                        <small class="fm-hint">Add up to 4 faculty members for this course.</small>
+                    </div>
+                    <div class="form-group">
+                        <label for="editSemesterText">Semester Text</label>
+                        <input type="text" id="editSemesterText" name="editSemesterText">
+                    </div>
+                    <button type="submit" class="generate-btn">Update Course</button>
+                </form>
+
+                <hr style="margin: 30px 0;">
+
+                <div id="experimentsSection" style="display: none;">
+                    <h3 class="form-title">Manage Experiments</h3>
+                    <div id="experimentList" class="experiment-list"><p>Select a course to view experiments.</p></div>
+                    <form id="addExperimentForm" style="margin-top: 20px;">
+                        <div class="form-group"><label for="expNum">Experiment Number</label><input type="text" id="expNum" name="expNum" placeholder="e.g., 01"></div>
+                        <div class="form-group"><label for="expTitle">Experiment Title</label><input type="text" id="expTitle" name="expTitle" placeholder="e.g., Transfer Function from Zeros and Poles"></div>
+                        <button type="submit" class="generate-btn">Add Experiment</button>
+                    </form>
+                </div>
+
+                <div id="assignmentsSection" style="display: none;">
+                    <h3 class="form-title">Manage Assignments</h3>
+                    <div id="courseAssignmentList" class="experiment-list"><p>No assignments added yet.</p></div>
+                    <form id="addCourseAssignmentForm" style="margin-top: 20px;">
+                        <div class="form-group"><label for="courseAssignmentNum">Assignment Number</label><input type="text" id="courseAssignmentNum" name="courseAssignmentNum" placeholder="e.g., 01"></div>
+                        <div class="form-group"><label for="courseAssignmentTitle">Assignment Title</label><input type="text" id="courseAssignmentTitle" name="courseAssignmentTitle" placeholder="e.g., Analyze System Response"></div>
+                        <div class="form-group"><label for="courseAssignmentSubmissionDate">Submission Date</label><input type="date" id="courseAssignmentSubmissionDate" name="courseAssignmentSubmissionDate"></div>
+                        <button type="submit" class="generate-btn">Add Assignment</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- View Students Section -->
+        <div id="viewStudents" class="admin-section">
+            <div class="form-container">
+                <h3 class="form-title">All Students</h3>
+                <div class="student-search-wrapper">
+                    <input type="text" id="studentSearch" class="student-search-input" placeholder="Search by name, ID, department, or session...">
+                </div>
+                <div id="studentList" class="course-list"><div class="loading">Loading students...</div></div>
+            </div>
+        </div>
+
+        <!-- Add Student Section -->
+        <div id="addStudent" class="admin-section">
+            <div class="form-container">
+                <h3 class="form-title">Add New Student</h3>
+                <form id="addStudentForm">
+                    <div class="form-group"><label for="studentId">Student ID (Roll Number) *</label><input type="text" id="studentId" name="studentId" required placeholder="e.g., 24702011"></div>
+                    <div class="form-group"><label for="studentFullName">Full Name *</label><input type="text" id="studentFullName" name="studentFullName" required placeholder="e.g., Md. Khalid Hasan"></div>
+                    <div class="form-group"><label for="studentDepartment">Department *</label><select id="studentDepartment" name="studentDepartment" required><option value="" disabled selected>Loading departments...</option></select></div>
+                    <div class="form-group"><label for="studentSession">Session (Optional)</label><input type="text" id="studentSession" name="studentSession" placeholder="e.g., 2023-2024 (leave empty for auto)"></div>
+                    <button type="submit" class="generate-btn">Add Student</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Edit Student Section -->
+        <div id="editStudent" class="admin-section">
+            <div class="form-container">
+                <h3 class="form-title">Edit Student</h3>
+                <form id="editStudentForm">
+                    <div class="form-group"><label for="editStudentId">Student ID</label><input type="text" id="editStudentId" name="editStudentId" disabled></div>
+                    <div class="form-group"><label for="editStudentFullName">Full Name *</label><input type="text" id="editStudentFullName" name="editStudentFullName" required></div>
+                    <div class="form-group"><label for="editStudentDepartment">Department *</label><select id="editStudentDepartment" name="editStudentDepartment" required><option value="" disabled selected>Loading departments...</option></select></div>
+                    <div class="form-group"><label for="editStudentSession">Session</label><input type="text" id="editStudentSession" name="editStudentSession" placeholder="e.g., 2023-2024"></div>
+                    <button type="submit" class="generate-btn">Update Student</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Assignment Management Section -->
+        <div id="assignmentManagement" class="admin-section">
+            <div class="admin-nav assignment-sub-nav">
+                <button class="active" data-assignment-tab="viewAssignments">View Assignments</button>
+                <button data-assignment-tab="addAssignment">Add Assignment</button>
+                <button data-assignment-tab="editAssignment">Edit Assignment</button>
+            </div>
+
+            <div id="viewAssignments" class="assignment-sub-section active">
+                <div class="form-container">
+                    <h3 class="form-title">All Assignments</h3>
+                    <div class="assignment-search-wrapper"><input type="text" id="assignmentSearch" class="assignment-search-input" placeholder="Search by course code or assignment name..."></div>
+                    <div id="assignmentList" class="course-list"><div class="loading">Loading assignments...</div></div>
+                </div>
+            </div>
+
+            <div id="addAssignment" class="assignment-sub-section">
+                <div class="form-container">
+                    <h3 class="form-title">Add New Assignment</h3>
+                    <form id="addAssignmentForm">
+                        <div class="form-group"><label for="assignmentNumber">Assignment Number *</label><input type="text" id="assignmentNumber" name="assignmentNumber" required placeholder="e.g., 01"></div>
+                        <div class="form-group"><label for="assignmentTitle">Assignment Title *</label><input type="text" id="assignmentTitle" name="assignmentTitle" required placeholder="e.g., Analyze System Response"></div>
+                        <div class="form-group"><label for="assignmentCourseCode">Course Code *</label><select id="assignmentCourseCode" name="assignmentCourseCode" required><option value="" disabled selected>Loading courses...</option></select></div>
+                        <div class="form-group"><label for="assignmentSubmissionDate">Submission Date *</label><input type="date" id="assignmentSubmissionDate" name="assignmentSubmissionDate" required></div>
+                        <button type="submit" class="generate-btn">Add Assignment</button>
+                    </form>
+                </div>
+            </div>
+
+            <div id="editAssignment" class="assignment-sub-section">
+                <div class="form-container">
+                    <h3 class="form-title">Edit Assignment</h3>
+                    <form id="editAssignmentForm">
+                        <div class="form-group"><label for="editAssignmentNumber">Assignment Number *</label><input type="text" id="editAssignmentNumber" name="editAssignmentNumber" required></div>
+                        <div class="form-group"><label for="editAssignmentTitle">Assignment Title *</label><input type="text" id="editAssignmentTitle" name="editAssignmentTitle" required></div>
+                        <div class="form-group"><label for="editAssignmentCourseCode">Course Code *</label><select id="editAssignmentCourseCode" name="editAssignmentCourseCode" required><option value="" disabled selected>Loading courses...</option></select></div>
+                        <div class="form-group"><label for="editAssignmentSubmissionDate">Submission Date *</label><input type="date" id="editAssignmentSubmissionDate" name="editAssignmentSubmissionDate" required></div>
+                        <button type="submit" class="generate-btn">Update Assignment</button>
+                    </form>
+                    <hr style="margin: 30px 0;">
+                    <h3 class="form-title">Select Assignment to Edit</h3>
+                    <div class="form-group"><label for="selectAssignmentToEdit">Select Assignment *</label><select id="selectAssignmentToEdit" name="selectAssignmentToEdit"><option value="" disabled selected>Choose an assignment...</option></select></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+    
+    <!-- Self-contained Firebase configuration -->
+    <script>
+        var firebaseConfig = {
+            apiKey: "AIzaSyAhbgEBwvfFMVsGrahhG1jtdpguT6RTh_A",
+            authDomain: "lddb-demo.firebaseapp.com",
+            databaseURL: "https://lddb-demo-default-rtdb.firebaseio.com",
+            projectId: "lddb-demo",
+            storageBucket: "lddb-demo.firebasestorage.app",
+            messagingSenderId: "188976453347",
+            appId: "1:188976453347:web:c49ffcee015aa3248117d6",
+            measurementId: "G-KY27E549BV"
+        };
+        if (typeof firebase !== 'undefined' && !firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
+    </script>
+    <!-- NOTE: The admin module JS files (tracker.js, course-manager.js, etc.) are not yet ported.
+         The admin panel UI requires additional JavaScript to be fully functional.
+         The four cover generator tools already work independently with inline scripts. -->
+    
+    <script>
+        // Common Header Mobile Menu
+        (function() {
+            var menuBtn = document.querySelector('.header-mobile-menu-btn');
+            var menuClose = document.querySelector('.header-mobile-menu-close');
+            var menu = document.getElementById('headerMobileMenu');
+            var overlay = document.getElementById('headerOverlay');
+            if (!menuBtn || !menuClose || !menu || !overlay) return;
+            function openMenu() { menu.classList.add('open'); overlay.classList.add('show'); document.body.style.overflow = 'hidden'; }
+            function closeMenu() { menu.classList.remove('open'); overlay.classList.remove('show'); document.body.style.overflow = ''; }
+            menuBtn.addEventListener('click', openMenu);
+            menuClose.addEventListener('click', closeMenu);
+            overlay.addEventListener('click', closeMenu);
+            document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu(); });
+        })();
+
+        // AdminManager.init() requires admin.js which is not yet available locally.
+    </script>
+</body>
+</html>

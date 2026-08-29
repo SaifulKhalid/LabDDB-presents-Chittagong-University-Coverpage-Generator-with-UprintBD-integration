@@ -1,0 +1,100 @@
+{
+  "//": [
+    "LabDDB-Pro Realtime Database rules — authentication and the DDB wallet.",
+    "",
+    "Deploy with:   firebase deploy --only database --project labddb-pro",
+    "(or paste into Firebase console -> Realtime Database -> Rules)",
+    "",
+    "The single idea here: NOTHING in this database is writable from a browser.",
+    "Every number that represents money is moved by the Cloudflare Worker using a",
+    "service-account credential, which bypasses these rules entirely. So `.write`",
+    "is false on every path — not as a placeholder, but as the design. A student's",
+    "browser can read their own balance and never change it, which is what makes",
+    "'you are only charged for a page that printed' a property of the system rather",
+    "than a promise.",
+    "",
+    "Reads are scoped to the owner with auth.uid == $uid. `config` is the one",
+    "public node: the cost calculator quotes a price before anyone signs in, and a",
+    "price list is not a secret.",
+    "",
+    "Note that denying reads on /users means a signed-in user cannot enumerate",
+    "other students. The admin console reads the whole tree through the Worker,",
+    "which checks the caller's email on every request (see requireAdmin in",
+    "lib/api.js) rather than relying on a role stored in the database."
+  ],
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "config": {
+      "//": "Pricing and limits. World-readable so the calculator works anonymously.",
+      ".read": true,
+      ".write": false
+    },
+
+    "wallets": {
+      "$uid": {
+        "//": "labddb-auth.js keeps a live listener here so the header chip updates the moment a print settles.",
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "users": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "jobs": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false,
+        "//": "ledger.recentJobs() queries this by createdAt; without the index the REST API answers 400.",
+        ".indexOn": "createdAt"
+      }
+    },
+
+    "ledger": {
+      "$uid": {
+        "//": "A student's own statement: top-ups in, charges out. Append-only, server-written.",
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false,
+        ".indexOn": "createdAt"
+      }
+    },
+
+    "roles": {
+      "$uid": {
+        "//": "Read so the UI can hide the admin link. Enforcement is server-side regardless.",
+        ".read": "auth != null && auth.uid === $uid",
+        ".write": false
+      }
+    },
+
+    "openJobs": {
+      "//": "The reconciler's working set, keyed by jobId with no uid scoping. Server only.",
+      ".read": false,
+      ".write": false
+    },
+
+    "printIndex": {
+      "//": "filename -> job. Server only: it maps a filename to the person who paid.",
+      ".read": false,
+      ".write": false
+    },
+
+    "admin": {
+      "//": "Institutional UprintBD balance, reconciler state, unmatched prints. Server only.",
+      ".read": false,
+      ".write": false
+    },
+
+    "adminIndex": {
+      ".read": false,
+      ".write": false
+    }
+  }
+}

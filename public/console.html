@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#003366" />
+  <!-- Unlinked page: reachable only by URL, and gated on one Google account. -->
+  <meta name="robots" content="noindex, nofollow" />
+  <title>LabDDB Console</title>
+  <link rel="icon" href="labddb-logo.png" type="image/png" />
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet" />
+
+  <link rel="stylesheet" href="css/styles.css" />
+
+  <!-- Firebase compat: auth only. The console never touches lddb-demo. -->
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-auth-compat.js"></script>
+  <script src="js/labddb-config.js"></script>
+</head>
+<body class="console-body">
+
+  <header class="console-header">
+    <div class="console-header-inner">
+      <div class="console-brand">
+        <span class="console-brand-mark">DDB</span>
+        <div>
+          <div class="console-brand-title">LabDDB Console</div>
+          <div class="console-brand-sub">Wallets, prints and the UprintBD account</div>
+        </div>
+      </div>
+
+      <div class="console-header-actions">
+        <div class="console-pill" id="uprintPill" title="Institutional UprintBD account balance">
+          <span class="pulse-dot" id="uprintDot"></span>
+          <span id="uprintPillText">UprintBD …</span>
+        </div>
+        <button type="button" class="icon-btn" id="themeToggleBtn" title="Toggle theme" aria-label="Toggle theme">
+          <svg class="sun-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="5"></circle>
+            <line x1="12" y1="1" x2="12" y2="3"></line>
+            <line x1="12" y1="21" x2="12" y2="23"></line>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+            <line x1="1" y1="12" x2="3" y2="12"></line>
+            <line x1="21" y1="12" x2="23" y2="12"></line>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+          </svg>
+          <svg class="moon-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+          </svg>
+        </button>
+        <button type="button" class="btn btn-ghost btn-sm" id="signOutBtn">Sign out</button>
+      </div>
+    </div>
+
+    <nav class="console-tabs" id="consoleTabs">
+      <button type="button" class="console-tab active" data-tab="overview">Overview</button>
+      <button type="button" class="console-tab" data-tab="users">Users &amp; Wallets</button>
+      <button type="button" class="console-tab" data-tab="jobs">Jobs</button>
+      <button type="button" class="console-tab" data-tab="ledger">Ledger</button>
+      <button type="button" class="console-tab" data-tab="audit">Audit &amp; Tracking (D1/R2)</button>
+      <button type="button" class="console-tab" data-tab="settings">Pricing &amp; Limits</button>
+      <button type="button" class="console-tab" data-tab="reconcile">Reconciliation</button>
+    </nav>
+  </header>
+
+  <!-- Gate. Covers everything until the one permitted account is confirmed. -->
+  <div class="admin-lock" id="consoleLock" hidden></div>
+
+  <main class="console-main" id="consoleMain" hidden>
+
+    <!-- ================= OVERVIEW ================= -->
+    <section class="console-pane active" id="paneOverview">
+      <div class="console-metrics" id="overviewMetrics"></div>
+
+      <div class="console-grid">
+        <div class="console-card">
+          <div class="console-card-head">
+            <h2>Money position</h2>
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshOverviewBtn">Refresh</button>
+          </div>
+          <div class="console-card-body" id="moneyPosition">
+            <p class="console-muted">Loading…</p>
+          </div>
+        </div>
+
+        <div class="console-card">
+          <div class="console-card-head">
+            <h2>Reconciler</h2>
+            <button type="button" class="btn btn-primary btn-sm" id="runReconcileBtn">Run now</button>
+          </div>
+          <div class="console-card-body" id="reconcilerHealth">
+            <p class="console-muted">Loading…</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= USERS ================= -->
+    <section class="console-pane" id="paneUsers">
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>Users &amp; wallets</h2>
+          <div class="console-head-tools">
+            <input type="search" class="form-input console-search" id="userSearch"
+                   placeholder="Search name, email or uid" autocomplete="off" />
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshUsersBtn">Refresh</button>
+          </div>
+        </div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="usersTable">
+            <thead>
+              <tr>
+                <th>User</th>
+                <th class="num">Balance</th>
+                <th class="num">Held</th>
+                <th class="num">Available</th>
+                <th>Roles</th>
+                <th>Last seen</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="usersTableBody">
+              <tr><td colspan="7" class="console-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= JOBS ================= -->
+    <section class="console-pane" id="paneJobs">
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>Print jobs</h2>
+          <div class="console-head-tools">
+            <div class="console-segment" id="jobScope">
+              <button type="button" class="console-segment-btn active" data-scope="open">Open holds</button>
+              <button type="button" class="console-segment-btn" data-scope="all">All recent</button>
+            </div>
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshJobsBtn">Refresh</button>
+          </div>
+        </div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="jobsTable">
+            <thead>
+              <tr>
+                <th>Created</th>
+                <th>User</th>
+                <th>File</th>
+                <th class="num">Price</th>
+                <th class="num">Cost</th>
+                <th>Status</th>
+                <th>OTP</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="jobsTableBody">
+              <tr><td colspan="8" class="console-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= LEDGER ================= -->
+    <section class="console-pane" id="paneLedger">
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>Ledger</h2>
+          <div class="console-head-tools">
+            <input type="text" class="form-input console-search" id="ledgerUid"
+                   placeholder="Filter by uid (blank = everyone)" autocomplete="off" />
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshLedgerBtn">Apply</button>
+            <button type="button" class="btn btn-ghost btn-sm" id="exportLedgerBtn">Export CSV</button>
+          </div>
+        </div>
+        <div class="console-metrics console-metrics--inline" id="ledgerTotals"></div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="ledgerTable">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>User</th>
+                <th>Type</th>
+                <th class="num">Amount</th>
+                <th class="num">Balance after</th>
+                <th>Note</th>
+              </tr>
+            </thead>
+            <tbody id="ledgerTableBody">
+              <tr><td colspan="6" class="console-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= AUDIT & TRACKING (D1/R2) ================= -->
+    <section class="console-pane" id="paneAudit">
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>Administrative Audit Trail &amp; D1 History</h2>
+          <div class="console-head-tools">
+            <select class="form-select console-filter" id="auditActionFilter">
+              <option value="">All actions</option>
+              <option value="topup">Top-ups</option>
+              <option value="adjustment">Adjustments / Refunds</option>
+              <option value="user_flags">User Flag Changes</option>
+              <option value="pricing_change">Pricing Changes</option>
+              <option value="force_settle">Force Settle</option>
+              <option value="force_expire">Force Expire</option>
+              <option value="unmatched_clear">Unmatched Clear</option>
+            </select>
+            <input type="search" class="form-input console-search" id="auditSearch"
+                   placeholder="Search email, UID or details…" autocomplete="off" />
+            <button type="button" class="btn btn-ghost btn-sm" id="refreshAuditBtn">Refresh</button>
+          </div>
+        </div>
+        <div class="console-card-body">
+          <p class="console-muted console-note">
+            Immutable log stored in <strong>Cloudflare D1 SQL</strong> and cover documents in <strong>Cloudflare R2</strong>.
+            Tracks all admin actions, user account changes, and financial modifications with timestamps and client metadata.
+          </p>
+        </div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="auditTable">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Action</th>
+                <th>Admin</th>
+                <th>Target UID</th>
+                <th>Details</th>
+                <th>Client IP</th>
+              </tr>
+            </thead>
+            <tbody id="auditTableBody">
+              <tr><td colspan="6" class="console-empty">Loading audit logs…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= SETTINGS ================= -->
+    <section class="console-pane" id="paneSettings">
+      <div class="console-grid">
+        <div class="console-card">
+          <div class="console-card-head"><h2>Pricing</h2></div>
+          <div class="console-card-body">
+            <p class="console-muted console-note">
+              What students pay per page. UprintBD charges the institutional account about
+              ৳2 per b/w page, so the difference is the margin that keeps the account funded.
+              Changes apply immediately — every calculator reads these numbers live.
+            </p>
+            <div class="console-field-row">
+              <div class="form-group">
+                <label class="form-label" for="priceMono">B&amp;W per page (৳)</label>
+                <input type="number" class="form-input" id="priceMono" min="0" max="1000" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="priceColor">Colour per page (৳)</label>
+                <input type="number" class="form-input" id="priceColor" min="0" max="1000" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="priceMaxCopies">Max copies per job</label>
+                <input type="number" class="form-input" id="priceMaxCopies" min="1" max="1000" step="1" />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="console-card">
+          <div class="console-card-head"><h2>Limits</h2></div>
+          <div class="console-card-body">
+            <p class="console-muted console-note">
+              Every mint spends real money at UprintBD even before anyone prints, so these
+              brakes exist to bound the damage from a runaway script or a stuck loop.
+            </p>
+            <div class="console-field-row">
+              <div class="form-group">
+                <label class="form-label" for="limitOpenHolds">Max open holds / user</label>
+                <input type="number" class="form-input" id="limitOpenHolds" min="0" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="limitPerHour">Max jobs / hour / user</label>
+                <input type="number" class="form-input" id="limitPerHour" min="0" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="limitPages">Max pages / job</label>
+                <input type="number" class="form-input" id="limitPages" min="0" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="limitMinTopUp">Min top-up (৳)</label>
+                <input type="number" class="form-input" id="limitMinTopUp" min="0" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="limitMaxTopUp">Max top-up (৳)</label>
+                <input type="number" class="form-input" id="limitMaxTopUp" min="0" step="1" />
+              </div>
+              <div class="form-group">
+                <label class="form-label" for="limitGrace">Hold grace (seconds)</label>
+                <input type="number" class="form-input" id="limitGrace" min="0" step="1" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="console-actions-bar">
+        <button type="button" class="btn btn-primary" id="saveSettingsBtn">Save pricing &amp; limits</button>
+        <span class="console-muted" id="settingsStatus"></span>
+      </div>
+    </section>
+
+    <!-- ================= RECONCILE ================= -->
+    <section class="console-pane" id="paneReconcile">
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>Unmatched prints</h2>
+          <button type="button" class="btn btn-ghost btn-sm" id="refreshUnmatchedBtn">Refresh</button>
+        </div>
+        <div class="console-card-body">
+          <p class="console-muted console-note">
+            Pages UprintBD says it printed that we could not tie to any job. This should
+            always be empty: a row here means the institution paid for paper nobody was
+            charged for, and the filename will usually say who it belonged to.
+          </p>
+        </div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="unmatchedTable">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>File</th>
+                <th class="num">Cost</th>
+                <th class="num">Pages</th>
+                <th>Device</th>
+                <th class="actions">Actions</th>
+              </tr>
+            </thead>
+            <tbody id="unmatchedTableBody">
+              <tr><td colspan="6" class="console-empty">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="console-card">
+        <div class="console-card-head">
+          <h2>UprintBD print history</h2>
+          <button type="button" class="btn btn-ghost btn-sm" id="refreshUprintBtn">Fetch last 7 days</button>
+        </div>
+        <div class="console-table-wrap">
+          <table class="console-table" id="uprintTable">
+            <thead>
+              <tr>
+                <th>When</th>
+                <th>File</th>
+                <th class="num">Cost</th>
+                <th class="num">Copies</th>
+                <th class="num">Pages</th>
+                <th>Status</th>
+                <th>Device</th>
+              </tr>
+            </thead>
+            <tbody id="uprintTableBody">
+              <tr><td colspan="7" class="console-empty">Not fetched yet.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Modal host for top-up / adjust / confirm -->
+  <div id="consoleModalHost"></div>
+
+  <div class="toast-container" id="toastContainer" aria-live="polite"></div>
+
+  <script src="js/labddb-auth.js"></script>
+  <script src="js/console.js"></script>
+</body>
+</html>

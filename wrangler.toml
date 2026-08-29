@@ -1,0 +1,67 @@
+# Worker name (renamed from labddb-uprint-pitch to pitch -> pitch.labddb.workers.dev)
+name = "pitch"
+main = "src/worker.js"
+compatibility_date = "2024-09-23"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = "./public"
+binding = "ASSETS"
+
+[vars]
+UPRINT_BASE_URL = "https://uprintbd.com"
+# Lock this to the production origin once the domain is final. "*" is fine while
+# the only client is same-origin, but the API mints money-spending OTPs, so a
+# wildcard is not something to leave lying around.
+ALLOWED_ORIGIN = "*"
+
+# ---- Cloudflare D1 Database -------------------------------------------------
+# Stores relational audit logs, user activity history, print job archives,
+# and immutable ledger statements.
+[[d1_databases]]
+binding = "DB"
+database_name = "labddb-uprint-db"
+database_id = "c1c7f445-7f0a-461a-9da0-5da68505e6f2"
+
+# ---- Cloudflare R2 Object Storage -------------------------------------------
+# Stores generated PDF cover pages and printable artifacts.
+[[r2_buckets]]
+binding = "COVERS_BUCKET"
+bucket_name = "labddb-covers"
+preview_bucket_name = "labddb-covers-preview"
+
+# The reconciler. This is what turns a hold into a charge, so it is not optional
+# infrastructure — it is the mechanism behind "you are only charged if it printed".
+#
+# Every minute: read UprintBD's print history, settle jobs whose filename shows up
+# as Completed, and release holds whose OTP lapsed unused (deleting the UprintBD
+# record first). /api/print also reconciles inline when the last run looks stale,
+# so a cron outage delays settlement rather than freezing anyone's balance.
+[triggers]
+crons = ["* * * * *"]
+
+# =============================================================================
+# Secrets — set with `wrangler secret put NAME`, never in this file.
+# This file is committed; anything below would be committed with it.
+#
+#   wrangler secret put UPRINT_EMAIL              institutional UprintBD login
+#   wrangler secret put UPRINT_PASSWORD
+#   wrangler secret put FIREBASE_API_KEY          LabDDB-Pro web API key (ID-token verification)
+#   wrangler secret put LABDDB_PROJECT_ID         e.g. labddb-pro
+#   wrangler secret put LABDDB_DATABASE_URL       https://labddb-pro-default-rtdb.firebaseio.com
+#   wrangler secret put LABDDB_SERVICE_ACCOUNT    LabDDB-Pro service-account JSON, whole file on one line
+#   wrangler secret put LDDB_DEMO_SERVICE_ACCOUNT lddb-demo service-account JSON, for coverAdmin custom tokens
+#   wrangler secret put ADMIN_EMAIL               project admin (defaults to htmlwithkhalid@gmail.com)
+#
+# The two service-account JSON keys are full admin credentials for their
+# databases: they bypass the security rules in firebase/*.rules.json, which is
+# exactly why every money path lives on this side of the wire. Treat them like
+# the UprintBD password. If either leaks, revoke the key in
+# Google Cloud console -> IAM -> Service accounts -> Keys and put a new one.
+#
+# Free vs paid: RSA-signing a service-account JWT and base64-decoding an uploaded
+# PDF in the same request is tight against the free tier's 10 ms CPU limit. The
+# OAuth token is cached across requests, so a warm isolate is usually fine, but
+# the $5/mo Workers Paid plan removes the cliff — and a cold start that fails is
+# a student standing at a kiosk with no code.
+# =============================================================================

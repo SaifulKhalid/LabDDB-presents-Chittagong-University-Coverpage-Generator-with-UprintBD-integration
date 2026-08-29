@@ -1,0 +1,71 @@
+{
+  "//": [
+    "lddb-demo Realtime Database rules — the course and student catalogue.",
+    "",
+    "Deploy with:   firebase deploy --only database --project lddb-demo",
+    "(or paste into Firebase console -> Realtime Database -> Rules)",
+    "",
+    "This database is currently wide open, which is the single most urgent thing",
+    "these rules fix: today anyone who views the page source can rewrite every",
+    "course, faculty name and student record in it.",
+    "",
+    "The shape it needs is unusual, so it is worth stating plainly:",
+    "",
+    "  READ is public and unauthenticated. It has to be. Browsing courses, picking",
+    "  a subject and downloading a cover page PDF are free features that work with",
+    "  no account — that was a deliberate product decision, and it means the course",
+    "  list must be readable by a visitor who has never signed in. None of it is",
+    "  sensitive: it is a university's public course catalogue.",
+    "",
+    "  WRITE requires a `coverAdmin` claim. Students never sign in to THIS project",
+    "  at all — they sign in to LabDDB-Pro. So a normal `auth != null` check would",
+    "  be useless here (there is no normal user to match) and an email allowlist",
+    "  would need this project to own the sign-in. Instead, the coverpage admin",
+    "  signs in to LabDDB-Pro with Google, the Worker checks their `coverAdmin`",
+    "  role, and mints a short-lived custom token for lddb-demo carrying that claim",
+    "  (POST /api/cover-token -> lib/api.js). The claim below is what that token",
+    "  puts in `auth.token`. A one-hour token, minted only for accounts the project",
+    "  admin has granted the role, is what stands between the catalogue and the",
+    "  open internet.",
+    "",
+    "  `students` is the exception to public read. Roll numbers and names are",
+    "  personal data, and the generators only ever look up one roll at a time by",
+    "  exact key — which stays possible under a per-record read rule while a bulk",
+    "  scrape of the whole node does not. The admin panel's student list reads the",
+    "  node whole, so that read needs the coverAdmin claim too.",
+    "",
+    "The generators write nothing here, so there is no client write path to keep",
+    "working. Only admin.html writes, and only through the custom token."
+  ],
+
+  "rules": {
+    ".read": false,
+    ".write": false,
+
+    "cvr3_courses": {
+      "//": "Public course catalogue: codes, titles, faculty, assignments, experiments.",
+      ".read": true,
+      ".write": "auth != null && auth.token.coverAdmin === true"
+    },
+
+    "cvr3_meta": {
+      "//": "Counters and settings shown on the admin dashboard.",
+      ".read": true,
+      ".write": "auth != null && auth.token.coverAdmin === true"
+    },
+
+    "students": {
+      "//": [
+        "Name/roll lookups. The generators read one record at a time by exact key",
+        "(students/<roll>), which the per-record rule allows anonymously. Reading the",
+        "whole node — which is what a scrape would do, and what the admin panel's",
+        "student list legitimately does — needs the coverAdmin claim."
+      ],
+      ".read": "auth != null && auth.token.coverAdmin === true",
+      ".write": "auth != null && auth.token.coverAdmin === true",
+      "$roll": {
+        ".read": true
+      }
+    }
+  }
+}

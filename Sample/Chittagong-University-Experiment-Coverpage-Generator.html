@@ -1,0 +1,471 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#037d73">
+    <title>CU | Experiment Cover Generator</title>
+    <link rel="icon" href="culogo.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+    <!-- PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Firebase SDKs (matching admin panel) -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #037d73;
+            --primary-dark: #025b54;
+            --primary-light: #e0f2f1;
+            --accent: #ff7e33;
+            --bg: #f5f7fa;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --touch-target: 44px;
+            --safe-area-bottom: env(safe-area-inset-bottom, 16px);
+            --radius-sm: 8px;
+        }
+
+        html, body {
+            height: 100vh;
+            margin: 0;
+            padding: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            touch-action: pan-y;
+        }
+
+        /* ==========================================================================
+           COMMON HEADER
+           ========================================================================== */
+        #mainHeader {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            z-index: 50;
+            position: relative;
+            flex-shrink: 0;
+        }
+        @media (min-width: 768px) {
+            #mainHeader { position: sticky; top: 0; box-shadow: var(--shadow-sm); }
+        }
+        .header-container { max-width: 1400px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
+        .header-logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); flex-shrink: 0; }
+        .header-logo-link:hover { opacity: 0.85; }
+        .header-logo { width: 36px; height: auto; }
+        .header-site-name { font-size: 17px; font-weight: 700; color: #003366; letter-spacing: -0.3px; }
+        .header-desktop-nav { display: none; align-items: center; gap: 6px; }
+        @media (min-width: 768px) { .header-desktop-nav { display: flex; } }
+        .header-desktop-nav-item { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-sm); color: #475569; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: default; }
+        .header-desktop-nav-item:hover { background: #eef2ff; color: #003366; }
+        .header-desktop-nav-item i { font-size: 13px; }
+        .header-mobile-menu-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: transparent; border: 2px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 18px; cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
+        .header-mobile-menu-btn:hover { border-color: #003366; color: #003366; }
+        @media (min-width: 768px) { .header-mobile-menu-btn { display: none; } }
+        .header-mobile-menu { position: fixed; top: 0; right: -320px; width: 300px; max-width: 85vw; height: 100vh; height: 100dvh; background: var(--surface); z-index: 60; box-shadow: -4px 0 20px rgba(0,0,0,0.15); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; padding: 0; }
+        .header-mobile-menu.open { right: 0; }
+        .header-mobile-menu-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        .header-mobile-menu-top .header-site-name { font-size: 17px; font-weight: 700; color: #003366; }
+        .header-mobile-menu-close { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: transparent; color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .header-mobile-menu-close:hover { background: var(--danger-light); border-color: var(--danger); color: var(--danger); }
+        .header-mobile-menu nav { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+        .header-mobile-nav-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; color: var(--text); font-size: 15px; font-weight: 500; cursor: default; }
+        .header-mobile-nav-item:hover { background: #eef2ff; color: #003366; }
+        .header-mobile-nav-item i { font-size: 16px; width: 22px; text-align: center; }
+        .header-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 55; opacity: 0; transition: opacity 0.3s; }
+        .header-overlay.show { display: block; opacity: 1; }
+
+        .app-layout { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+        @media (min-width: 768px) { .app-layout { height: calc(100vh - 56px); height: calc(100dvh - 56px); } }
+        @media (max-width: 767px) { .app-layout { height: auto; min-height: 100vh; min-height: 100dvh; } }
+
+        .sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow-y: auto; z-index: 100; }
+        .sidebar-brand { text-align: center; padding: 28px 16px 18px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { width: 52px; height: auto; margin-bottom: 10px; }
+        .sidebar-title { font-size: 14px; font-weight: 700; color: var(--primary); margin: 0 0 2px; }
+        .sidebar-subtitle { font-size: 10px; color: var(--text-muted); margin: 0; }
+        .sidebar-nav { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; color: #475569; font-size: 13px; font-weight: 500; transition: all 0.15s ease; cursor: default; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary); }
+        .sidebar-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .nav-icon { font-size: 15px; width: 22px; text-align: center; flex-shrink: 0; }
+
+        .main-area { flex: 1; display: flex; min-width: 0; height: 100%; overflow: hidden; }
+
+        .form-panel { width: 380px; min-width: 320px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; }
+        .form-panel-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; }
+        .form-panel-header h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin: 0 0 2px; }
+        .form-panel-header p { font-size: 11px; color: var(--text-muted); margin: 0; }
+        .sync-status { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 10px; font-weight: 500; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; }
+        .sync-dot.connected { background: var(--success); }
+        .sync-dot.disconnected { background: var(--danger); }
+        .sync-dot.syncing { background: var(--warning); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .form-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 20px; -webkit-overflow-scrolling: touch; touch-action: pan-y; }
+
+        .form-block { margin-bottom: 18px; }
+        .form-block-title { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 500; color: #475569; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 6px; font-family: inherit; font-size: 13px; color: var(--text); background: #fafbfc; transition: border-color 0.2s, box-shadow 0.2s; min-height: var(--touch-target); }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(3,125,115,0.08); }
+        .form-group input:disabled, .form-group select:disabled { background: #f1f5f9; color: var(--text-muted); cursor: not-allowed; }
+        .form-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+        .date-row { display: flex; gap: 10px; }
+        .date-row .form-group { flex: 1; }
+        .student-lookup-result { font-size: 10px; margin-top: 4px; min-height: 16px; transition: color 0.2s; }
+
+        .btn-primary { width: 100%; padding: 11px 16px; background: var(--primary); color: #fff; border: none; border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s, transform 0.15s; min-height: var(--touch-target); }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+        .action-row { display: flex; gap: 8px; margin-top: 14px; }
+        .action-row .btn-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 10px 12px; border-radius: 6px; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; min-height: 40px; border: 2px solid var(--primary); }
+        .btn-edit { background: var(--surface); color: var(--primary); }
+        .btn-edit:hover { background: var(--primary-light); }
+        .btn-edit.saving { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+        .btn-print { background: var(--primary); color: #fff; }
+        .btn-print:hover { background: var(--primary-dark); }
+        .btn-pdf { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-pdf:hover { background: #e66a1a; }
+
+        .preview-panel { flex: 1; display: flex; flex-direction: column; height: 100%; min-width: 0; background: var(--bg); }
+        .preview-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .preview-header h3 { font-size: 13px; font-weight: 600; color: var(--primary); margin: 0; }
+        .preview-badge { font-size: 10px; padding: 3px 8px; background: var(--primary-light); color: var(--primary); border-radius: 10px; font-weight: 500; }
+        .preview-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 16px; overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; touch-action: pan-y; padding-bottom: var(--safe-area-bottom); }
+        .preview-scale { transform-origin: top center; transition: transform 0.15s ease; max-width: 100%; max-height: 100%; }
+
+        .cover-page {
+            --cvr-primary: #003366; --cvr-primary-dark: #002244; --cvr-primary-light: #eef2ff; --cvr-accent: #FFCC00;
+            width: 210mm; min-height: 297mm; padding: 28px 32px;
+            background: #ffffff; color: #111111; border: 2px solid var(--cvr-primary);
+            box-shadow: var(--shadow-md); border-radius: 2px;
+            font-family: "Times New Roman", Times, serif; line-height: 1.42;
+            position: relative; display: block; flex-shrink: 0;
+        }
+        .cover-page::before { content: ""; position: absolute; inset: 8px; border: 1px solid var(--cvr-primary); pointer-events: none; }
+        .cover-header { text-align: center; margin-bottom: 14px; }
+        .cover-header img { display: block; width: 80px; height: auto; margin: 0 auto 8px; }
+        .cover-university { font-size: 22pt; font-weight: 700; color: #111111; margin-bottom: 2px; }
+        .cover-department { font-size: 14pt; color: #111111; margin-bottom: 2px; }
+        .cover-title-block { text-align: center; margin: 22px 0 16px; }
+        .cover-title { display: inline-block; font-family: Arial, Helvetica, sans-serif; font-size: 22pt; font-weight: 700; color: var(--cvr-primary); text-transform: uppercase; letter-spacing: 1.5px; padding: 4px 24px; border-top: 2px solid var(--cvr-primary); border-bottom: 2px solid var(--cvr-primary); }
+        .cover-table { width: 100%; margin: 12px 0; border-collapse: collapse; border: 1.4px solid #111111; table-layout: fixed; }
+        .cover-table tr { border-bottom: 1px solid #111111; }
+        .cover-table td { padding: 8px 12px; font-size: 12pt; border: 1px solid #111111; vertical-align: middle; color: #111111; }
+        .cover-table td:first-child { font-weight: 700; color: var(--cvr-primary); width: 30%; background-color: var(--cvr-primary-light); text-align: center; }
+        .cover-table td:last-child { color: #111111; font-weight: 500; }
+        .cover-table .center { text-align: center; }
+        .submitted-section { margin-top: 14px; }
+        .submitted-section table td { background: transparent !important; color: #111111 !important; }
+        .submitted-section table tr:first-child td { background: var(--cvr-primary-light) !important; color: var(--cvr-primary) !important; font-weight: 700; }
+        .faculty-cell { min-height: 80px; padding: 14px 12px !important; }
+        .faculty-multi { display: flex; flex-direction: row; gap: 0; justify-content: center; flex-wrap: wrap; }
+        .faculty-block { flex: 1; min-width: 180px; text-align: center; padding: 4px 10px; border-right: 1px solid #ccc; font-size: 12pt; line-height: 1.45; }
+        .faculty-block:last-child { border-right: none; }
+        .faculty-block strong { font-size: 13pt; color: #111111; }
+        .student-info { line-height: 1.7; padding: 10px 16px !important; text-align: left !important; }
+        .student-info strong { font-size: 1.15em; }
+
+        .cover-page.editing-active td:not(.no-edit),
+        .cover-page.editing-active .cover-department,
+        .cover-page.editing-active .cover-university,
+        .cover-page.editing-active .cover-title { outline: 2px dashed #94a3b8; outline-offset: 1px; cursor: text; }
+        .cover-page.editing-active [contenteditable="true"]:focus { outline: 2px solid #3b82f6 !important; outline-offset: 1px; background-color: rgba(59,130,246,0.06); }
+
+        .loading-overlay, .error-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 40px; color: var(--text-muted); font-size: 14px; min-height: 50vh; }
+        .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-state { color: var(--danger); text-align: center; }
+        .error-state button { margin-top: 8px; padding: 8px 20px; background: var(--primary); color: #fff; border: none; border-radius: 6px; cursor: pointer; font-size: 13px; font-weight: 500; min-height: var(--touch-target); }
+
+        .form-panel-toggle { display: none; position: absolute; top: 12px; right: 16px; width: 40px; height: 40px; background: var(--primary-light); border: 2px solid var(--primary); border-radius: 50%; font-size: 18px; cursor: pointer; z-index: 20; transition: all 0.25s ease; align-items: center; justify-content: center; color: var(--primary); -webkit-tap-highlight-color: transparent; box-shadow: var(--shadow-sm); }
+        .form-panel-toggle:active { transform: scale(0.92); background: var(--primary); color: white; }
+
+        .mobile-nav { display: none; flex-shrink: 0; background: var(--surface); border-top: 1px solid var(--border); padding: 8px 4px; padding-bottom: max(8px, env(safe-area-inset-bottom)); justify-content: space-around; align-items: center; box-shadow: 0 -2px 10px rgba(0,0,0,0.05); z-index: 10; position: fixed; bottom: 0; left: 0; right: 0; }
+        .mobile-nav-item { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 10px; font-weight: 500; gap: 2px; padding: 6px 10px; border-radius: 8px; transition: all 0.15s ease; -webkit-tap-highlight-color: transparent; min-width: 56px; cursor: default; }
+        .mobile-nav-item.active { color: var(--primary); background: var(--primary-light); }
+        .mobile-nav-item .nav-icon { font-size: 20px; line-height: 1; }
+
+        @media (min-width: 768px) and (max-width: 1023px) { .sidebar { display: none; } .form-panel { width: 300px; min-width: 260px; } .preview-container { padding: 12px; } .mobile-nav { display: none !important; } }
+
+        @media (max-width: 767px) {
+            html, body { overflow-x: hidden; overflow-y: auto; position: static; width: 100%; height: auto; padding-bottom: 70px; background: var(--bg); }
+            .app-layout { flex-direction: column; height: auto; overflow: visible; min-height: 100vh; min-height: 100dvh; }
+            .main-area { flex-direction: column; height: auto; overflow: visible; flex: 1; }
+            .sidebar { display: none; }
+            .form-panel { width: 100%; min-width: 0; height: auto; max-height: none; border-right: none; border-bottom: none; border-radius: 0; box-shadow: none; display: block; background: var(--surface); overflow: visible; touch-action: pan-y; }
+            .form-panel-header { padding: 24px 20px 16px; text-align: center; background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%); color: white; position: relative; z-index: 5; border-bottom: none; border-radius: 0; }
+            .form-panel-header h2 { font-size: 20px; color: white; margin-bottom: 4px; }
+            .form-panel-header p { font-size: 13px; color: rgba(255,255,255,0.85); }
+            .sync-status { justify-content: center; font-size: 11px; color: rgba(255,255,255,0.9); }
+            .sync-dot.connected { background: #4ade80; } .sync-dot.disconnected { background: #fca5a5; }
+            .form-scroll { padding: 20px; overflow-y: visible; max-height: none; touch-action: pan-y; }
+            .form-block-title { font-size: 13px; letter-spacing: 0.8px; }
+            .form-group label { font-size: 13px; }
+            .form-group input, .form-group select { font-size: 16px; padding: 14px 16px; min-height: 50px; border-radius: 10px; border-width: 2px; background: white; }
+            .btn-primary { font-size: 17px; padding: 16px; min-height: 54px; border-radius: 12px; font-weight: 700; letter-spacing: 0.3px; box-shadow: 0 4px 12px rgba(3,125,115,0.3); margin-top: 8px; }
+            .action-row { margin-top: 16px; padding-bottom: 8px; }
+            .action-row .btn-action { font-size: 15px; padding: 14px; min-height: 50px; border-radius: 10px; }
+            .preview-panel { width: 100%; height: auto; min-height: auto; z-index: auto; border-top: 3px solid var(--primary-light); background: var(--bg); padding-bottom: 20px; }
+            .preview-header { padding: 16px 20px; justify-content: center; gap: 12px; position: sticky; top: 0; z-index: 5; background: var(--surface); border-bottom: 1px solid var(--border); box-shadow: var(--shadow-sm); }
+            .preview-header h3 { font-size: 15px; }
+            .preview-container { padding: 16px 12px; overflow: visible; min-height: auto; touch-action: pan-y; padding-bottom: var(--safe-area-bottom); display: flex; justify-content: center; }
+            .cover-page { padding: 24px 20px; min-height: auto; width: 100%; max-width: 100%; margin: 0 auto; box-shadow: var(--shadow-md); }
+            .cover-university { font-size: 17pt; } .cover-department { font-size: 12pt; } .cover-title { font-size: 17pt; padding: 4px 18px; }
+            .cover-table td { padding: 8px 10px; font-size: 10pt; }
+            .faculty-block { font-size: 10pt; min-width: 140px; padding: 6px 8px; } .faculty-block strong { font-size: 11pt; }
+            .student-info { font-size: 10pt; padding: 8px 10px !important; }
+            .loading-overlay, .error-state { padding: 60px 20px; font-size: 15px; min-height: 40vh; } .loading-spinner { width: 40px; height: 40px; }
+            .mobile-nav { display: flex; }
+            .form-panel-toggle { display: flex; top: 16px; right: 12px; background: rgba(255,255,255,0.2); border-color: rgba(255,255,255,0.5); color: white; }
+            .form-panel-toggle:active { background: rgba(255,255,255,0.4); color: white; }
+            .form-panel.collapsed .form-scroll { display: none; }
+            .form-panel.collapsed .form-panel-header { padding: 16px 20px; border-radius: 0; }
+            .form-panel.collapsed .form-panel-header p, .form-panel.collapsed .sync-status { display: none; }
+            .form-panel.collapsed .form-panel-header h2 { font-size: 16px; margin: 0; }
+        }
+        @media (max-width: 379px) { .form-panel-header h2 { font-size: 18px; } .form-scroll { padding: 16px 14px; } .cover-page { padding: 16px 12px; } .cover-university { font-size: 15pt; } .cover-department { font-size: 10pt; } .cover-title { font-size: 15pt; } .cover-table td { padding: 5px 6px; font-size: 8pt; } .mobile-nav-item { font-size: 9px; padding: 4px 6px; min-width: 48px; } .mobile-nav-item .nav-icon { font-size: 18px; } }
+
+        @media print {
+            @page { size: A4; margin: 12mm; }
+            html, body { height: auto; overflow: visible; background: white; padding-bottom: 0; }
+            #mainHeader, .sidebar, .form-panel, .preview-header, .preview-badge, .mobile-nav,
+            .app-layout > *:not(.main-area), .main-area > *:not(.preview-panel),
+            .loading-overlay, .error-state, .scroll-hint, .header-overlay, .header-mobile-menu { display: none !important; }
+            .app-layout, .main-area, .preview-panel, .preview-container { display: block !important; height: auto !important; width: 100% !important; overflow: visible !important; background: white !important; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; position: static !important; }
+            .preview-scale { transform: none !important; width: 100% !important; height: auto !important; max-width: none !important; max-height: none !important; }
+            .cover-page { display: block !important; width: 100% !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 20px 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; position: static !important; page-break-inside: avoid; background: white !important; }
+            .cover-page::before { display: none !important; }
+            .cover-page.editing-active td:not(.no-edit), .cover-page.editing-active .cover-department, .cover-page.editing-active .cover-university, .cover-page.editing-active .cover-title { outline: none !important; background: transparent !important; cursor: default !important; }
+            .cover-table td { padding: 2mm 3mm; font-size: 10pt; }
+            .cover-table td:first-child { background: #f7f7f7 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .cover-university { font-size: 16pt; } .cover-department { font-size: 11pt; } .cover-title { font-size: 16pt; border-color: var(--cvr-primary) !important; } .faculty-block strong { font-size: 11pt; }
+        }
+    </style>
+  <!-- Google Analytics removed for independence -->
+</head>
+<body>
+
+    <!-- Common Header -->
+    <header id="mainHeader">
+        <div class="header-container">
+            <div class="header-logo-link">
+                <img src="culogo.png" alt="CU logo" class="header-logo" onerror="this.style.display='none'">
+            </div>
+            <nav class="header-desktop-nav">
+                <span class="header-desktop-nav-item"><i class="fas fa-tools"></i> Tools</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+            <button class="header-mobile-menu-btn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+        </div>
+        <div class="header-mobile-menu" id="headerMobileMenu">
+            <div class="header-mobile-menu-top">
+                <span class="header-site-name">Chittagong University</span>
+                <button class="header-mobile-menu-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
+            </div>
+            <nav>
+                <span class="header-mobile-nav-item"><i class="fas fa-tools"></i> All Tools</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+        </div>
+        <div class="header-overlay" id="headerOverlay"></div>
+    </header>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="culogo.png" alt="Logo" class="sidebar-logo" onerror="this.style.display='none'">
+                <div class="sidebar-title">Chittagong University</div>
+                <div class="sidebar-subtitle"></div>
+            </div>
+            <nav class="sidebar-nav">
+                <span class="sidebar-nav-link active"><span class="nav-icon">📋</span> Experiment Cover</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">📄</span> Main Cover Page</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">📑</span> Index Page</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">📝</span> Assignment Cover</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">⚙️</span> Admin Panel</span>
+            </nav>
+        </aside>
+
+        <div class="main-area">
+            <div class="form-panel" id="formPanel">
+                <div class="form-panel-header">
+                    <h2>Cover Page Generator</h2>
+                    <p>Fill in the details to generate a cover page</p>
+                    <div class="sync-status">
+                        <span class="sync-dot disconnected" id="syncDot"></span>
+                        <span id="syncText">Connecting...</span>
+                    </div>
+                    <button class="form-panel-toggle" id="formPanelToggle" aria-label="Collapse form panel" title="Collapse form">▲</button>
+                </div>
+                <div class="form-scroll">
+                    <div class="form-block"><div class="form-block-title">Course Information</div>
+                        <div class="form-group"><label for="courseSelect">Select Course</label><select id="courseSelect" disabled><option value="">Loading courses...</option></select></div>
+                        <div class="form-group"><label for="experimentSelect">Select Experiment</label><select id="experimentSelect" disabled><option value="">Select a course first...</option></select></div>
+                    </div>
+                    <hr class="form-divider">
+                    <div class="form-block"><div class="form-block-title">Student Information</div>
+                        <div class="form-group"><label for="rollNumber">Roll Number</label><input type="text" id="rollNumber" placeholder="e.g. 24702008" autocomplete="off"><div class="student-lookup-result" id="studentLookupResult"></div></div>
+                        <div class="form-group"><label for="studentName">Student Name</label><input type="text" id="studentName" placeholder="Full name" autocomplete="off"></div>
+                    </div>
+                    <hr class="form-divider">
+                    <div class="form-block"><div class="form-block-title">Dates</div>
+                        <div class="date-row"><div class="form-group"><label for="experimentDate">Experiment Date</label><input type="date" id="experimentDate"></div><div class="form-group"><label for="submissionDate">Submission Date</label><input type="date" id="submissionDate"></div></div>
+                    </div>
+                    <hr class="form-divider">
+                    <button type="button" class="btn-primary" id="generateBtn" disabled>🔄 Generate Cover Page</button>
+                    <div class="action-row"><button id="enableEditBtn" class="btn-action btn-edit">✏️ Edit</button><button id="pdfBtn" class="btn-action btn-pdf">📄 PDF</button><button id="printBtn" class="btn-action btn-print">🖨️ Print</button></div>
+                </div>
+            </div>
+
+            <div class="preview-panel" id="previewPanel">
+                <div class="preview-header"><h3>Live Preview</h3><span class="preview-badge">A4 Document</span></div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div><span>Connecting to database...</span></div>
+                    <div class="error-state" id="errorState" style="display:none;"><span>⚠️ Unable to connect</span><button onclick="location.reload()">Retry</button></div>
+                    <div class="preview-scale" id="previewScale" style="display:none;">
+                        <div id="coverPageOutput" class="cover-page">
+                            <div class="cover-header"><img src="culogo.png" alt="Crest" onerror="this.style.display='none'"><div class="cover-department" data-field="department">Department of <strong>Electrical and Electronic Engineering</strong></div><div class="cover-university" data-field="university">University of Chittagong</div></div>
+                            <div class="cover-title-block"><div class="cover-title" data-field="cover-type">Lab Report</div></div>
+                            <table class="cover-table">
+                                <tr><td width="30%" class="center">Course Code</td><td width="70%" data-field="course-code"><strong>---</strong></td></tr>
+                                <tr><td class="center">Course Title</td><td data-field="course-title">---</td></tr>
+                                <tr><td class="center">Experiment No</td><td data-field="experiment-no">---</td></tr>
+                                <tr><td class="center">Experiment Name</td><td data-field="experiment-name">---</td></tr>
+                                <tr><td class="center">Date of Experiment</td><td data-field="experiment-date">---</td></tr>
+                                <tr><td class="center">Date of Submission</td><td data-field="submission-date">---</td></tr>
+                            </table>
+                            <div class="submitted-section"><table class="cover-table"><tr><td colspan="2" class="center">Submitted to:</td></tr><tr><td class="center faculty-cell" colspan="2"><div class="faculty-multi" data-field="faculty"><div class="faculty-block"><strong>---</strong><br>---<br>Dept. of EEE<br>University of Chittagong</div></div></td></tr></table></div>
+                            <div class="submitted-section"><table class="cover-table"><tr><td class="center">Submitted by,</td></tr><tr><td class="student-info" data-field="student">Name: <strong>---</strong><br>ID: <strong>---</strong><br>Session: ---<br>--- Semester B.Sc Engineering<br>Dept. of EEE<br>University of Chittagong</td></tr></table></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="mobile-nav" id="mobileNav">
+            <span class="mobile-nav-item active"><span class="nav-icon">📋</span> Experiment</span>
+            <span class="mobile-nav-item"><span class="nav-icon">📄</span> Cover</span>
+            <span class="mobile-nav-item"><span class="nav-icon">📑</span> Index</span>
+            <span class="mobile-nav-item"><span class="nav-icon">📝</span> Assignment</span>
+            <span class="mobile-nav-item"><span class="nav-icon">⚙️</span> Admin</span>
+        </nav>
+    </div>
+
+<script>
+// Common Header Mobile Menu
+(function() {
+    var menuBtn = document.querySelector('.header-mobile-menu-btn');
+    var menuClose = document.querySelector('.header-mobile-menu-close');
+    var menu = document.getElementById('headerMobileMenu');
+    var overlay = document.getElementById('headerOverlay');
+    if (!menuBtn || !menuClose || !menu || !overlay) return;
+    function openMenu() { menu.classList.add('open'); overlay.classList.add('show'); document.body.style.overflow = 'hidden'; }
+    function closeMenu() { menu.classList.remove('open'); overlay.classList.remove('show'); document.body.style.overflow = ''; }
+    menuBtn.addEventListener('click', openMenu);
+    menuClose.addEventListener('click', closeMenu);
+    overlay.addEventListener('click', closeMenu);
+    document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu(); });
+})();
+
+// Main App Script
+(function() {
+    'use strict';
+    var firebaseConfig = {
+        apiKey: "AIzaSyAhbgEBwvfFMVsGrahhG1jtdpguT6RTh_A", authDomain: "lddb-demo.firebaseapp.com",
+        databaseURL: "https://lddb-demo-default-rtdb.firebaseio.com", projectId: "lddb-demo",
+        storageBucket: "lddb-demo.firebasestorage.app", messagingSenderId: "188976453347",
+        appId: "1:188976453347:web:c49ffcee015aa3248117d6", measurementId: "G-KY27E549BV"
+    };
+    var db = null, isConnected = false, fbReady = false;
+    var cover = document.getElementById('coverPageOutput'), container = document.getElementById('previewContainer'), scaleEl = document.getElementById('previewScale');
+    var loadingOverlay = document.getElementById('loadingOverlay'), errorState = document.getElementById('errorState');
+    var editBtn = document.getElementById('enableEditBtn'), printBtn = document.getElementById('printBtn'), pdfBtn = document.getElementById('pdfBtn'), genBtn = document.getElementById('generateBtn');
+    var courseSelect = document.getElementById('courseSelect'), experimentSelect = document.getElementById('experimentSelect');
+    var rollInput = document.getElementById('rollNumber'), nameInput = document.getElementById('studentName');
+    var expDateInput = document.getElementById('experimentDate'), subDateInput = document.getElementById('submissionDate');
+    var lookupResult = document.getElementById('studentLookupResult'), previewPanel = document.getElementById('previewPanel');
+    var formPanelEl = document.getElementById('formPanel'), formToggleBtn = document.getElementById('formPanelToggle');
+    var currentCourseData = null, currentExperimentData = null, currentStudentData = null, isFormCollapsed = false;
+
+    function initFirebase() { try { if (typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded'); if (!firebase.apps.length) firebase.initializeApp(firebaseConfig); db = firebase.database(); fbReady = true; return true; } catch (e) { console.error(e); showError('Firebase init failed'); return false; } }
+    function monitorConnection() { if (!db) return; db.ref('.info/connected').on('value', function(s) { isConnected = s.val() === true; updateConnStatus(); }); }
+    function updateConnStatus() { var d = document.getElementById('syncDot'), t = document.getElementById('syncText'); if (!d || !t) return; if (!fbReady) { d.className = 'sync-dot disconnected'; t.textContent = 'Not initialized'; } else if (isConnected) { d.className = 'sync-dot connected'; t.textContent = 'Live'; } else { d.className = 'sync-dot disconnected'; t.textContent = 'Disconnected'; } }
+    function setSyncing(m) { var d = document.getElementById('syncDot'), t = document.getElementById('syncText'); if (d) d.className = 'sync-dot syncing'; if (t) t.textContent = m || 'Syncing...'; }
+    function showLoading() { if (loadingOverlay) loadingOverlay.style.display = 'flex'; if (errorState) errorState.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'none'; }
+    function hideLoading() { if (loadingOverlay) loadingOverlay.style.display = 'none'; if (errorState) errorState.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'block'; }
+    function showError(m) { if (loadingOverlay) loadingOverlay.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'none'; if (errorState) { errorState.querySelector('span:first-child').textContent = '⚠️ ' + m; errorState.style.display = 'flex'; } }
+    function enableCtrls() { if (courseSelect) courseSelect.disabled = false; if (genBtn) genBtn.disabled = false; }
+    function isMob() { return window.innerWidth <= 767; }
+    function getDeviceInfo() { var ua = navigator.userAgent; var dt = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua) ? 'Tablet' : /Mobile|Android|iP(hone|od)/i.test(ua) ? 'Mobile' : 'Desktop'; var br = ua.indexOf('Firefox')>-1?'Firefox':ua.indexOf('Edg')>-1?'Edge':ua.indexOf('Chrome')>-1?'Chrome':ua.indexOf('Safari')>-1?'Safari':'Unknown'; var pl = ua.indexOf('Windows')>-1?'Windows':ua.indexOf('Mac')>-1?'macOS':ua.indexOf('Linux')>-1?'Linux':ua.indexOf('Android')>-1?'Android':/(iOS|iPhone|iPad)/.test(ua)?'iOS':'Unknown'; return { deviceType: dt, browser: br, platform: pl, screenWidth: screen.width, screenHeight: screen.height, language: navigator.language||'unknown', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone||'unknown', userAgent: ua }; }
+    function logEvent(et, src, pl) { if (!db) return Promise.resolve(); var di = getDeviceInfo(); var e = { eventType: et, source: src, timestamp: firebase.database.ServerValue.TIMESTAMP, device: di, deviceType: di.deviceType, userAgent: di.userAgent }; for (var k in pl) { if (pl.hasOwnProperty(k)) e[k] = pl[k]; } var w = [db.ref('cvr3_usage/events').push(e)]; var lp = { 'GENERATE_COVER': 'cvr3_usage/generations', 'EDIT_CONTENT': 'cvr3_usage/edits', 'PRINT_PAGE': 'cvr3_usage/prints' }; if (lp[et]) w.push(db.ref(lp[et]).push(e)); return Promise.all(w).catch(function(err) { console.error('Tracker:', err); }); }
+    function logGen(d) { return logEvent('GENERATE_COVER', 'cover-generator', { courseCode: d.courseCode||'', courseTitle: d.courseTitle||'', experimentNum: d.experimentNum||'', experimentName: d.experimentName||'', facultyName: d.facultyName||'', facultyMembers: d.facultyMembers||[], rollNumber: d.rollNumber||'', studentName: d.studentName||'', session: d.session||'', experimentDate: d.experimentDate||'', submissionDate: d.submissionDate||'' }); }
+    function logEdit(d) { return logEvent('EDIT_CONTENT', 'cover-generator', { rollNumber: d.rollNumber||'', courseCode: d.courseCode||'', field: d.field||'', oldValue: d.oldValue||'', newValue: d.newValue||'', experimentNum: d.experimentNum||'', experimentName: d.experimentName||'' }); }
+    function logPrint(d) { return logEvent('PRINT_PAGE', 'cover-generator', { rollNumber: d.rollNumber||'', courseCode: d.courseCode||'', courseTitle: d.courseTitle||'', experimentNum: d.experimentNum||'', experimentName: d.experimentName||'', studentName: d.studentName||'' }); }
+    function incCounter() { if (!db) return; db.ref('cvr3_meta/stats/coverpageCount').transaction(function(c) { return (c||0)+1; }).catch(function(e) { console.warn('Counter:', e); }); }
+    var courseCache = {}, studentCache = {}, courseList = [], loaded = false;
+
+    function fetchCourses() { if (!db) { showError('No database'); return Promise.reject(); } setSyncing('Loading...'); showLoading(); return db.ref('cvr3_courses').once('value').then(function(s) { var courses = s.val(); if (!courses) throw new Error('No courses.'); courseCache = {}; courseList = []; Object.keys(courses).forEach(function(c) { var o = courses[c]; courseCache[c] = { _key: c, courseCode: c, courseTitle: o.courseTitle||'', department: o.department||'EEE', courseType: o.courseType||'lab', facultyMembers: Array.isArray(o.facultyMembers)?o.facultyMembers:[], semesterText: o.semesterText||'', experiments: Array.isArray(o.experiments)?o.experiments:[], assignments: o.assignments||{} }; courseList.push(c); }); if (!courseList.length) throw new Error('No courses.'); courseList.sort(); loaded = true; populateCourses(); hideLoading(); enableCtrls(); updateConnStatus(); return courseCache; }).catch(function(e) { console.error(e); showError(e.message||'Failed'); updateConnStatus(); throw e; }); }
+    function populateCourses() { if (!courseSelect) return; courseSelect.innerHTML = '<option value="">Select Course...</option>'; courseSelect.disabled = false; courseList.forEach(function(c) { var o = courseCache[c]; var opt = document.createElement('option'); opt.value = c; opt.textContent = c + ' - ' + (o.courseTitle||'Untitled'); courseSelect.appendChild(opt); }); }
+    function getExperiments(c) { var cd = courseCache[c]; return cd ? cd.experiments || [] : []; }
+    function populateExperiments(exps) { if (!experimentSelect) return; experimentSelect.disabled = false; experimentSelect.innerHTML = '<option value="">Select Experiment...</option>'; if (!exps || !exps.length) { experimentSelect.innerHTML = '<option value="">No experiments</option>'; return; } exps.forEach(function(e, i) { var num = e.num || (i+1), title = e.title || 'Untitled'; var opt = document.createElement('option'); opt.value = i; opt.textContent = 'Experiment ' + num + ' - ' + title; experimentSelect.appendChild(opt); }); }
+    function deriveSess(id) { if (!id||id.length<2) return ''; var m={'24':'2023-2024','23':'2022-2023','22':'2021-2022','21':'2020-2021','20':'2019-2020','19':'2018-2019','18':'2017-2018','17':'2016-2017'}; return m[id.substring(0,2)]||''; }
+    function lookupStu(id) { if (!db||!id) return Promise.resolve(null); if (studentCache[id]) return Promise.resolve(studentCache[id]); setSyncing('Looking up...'); return db.ref('students/'+id).once('value').then(function(s) { var st = s.val(); if (st) { st._key = id; if (!st.session) st.session = deriveSess(id); studentCache[id] = st; updateConnStatus(); return st; } updateConnStatus(); return null; }).catch(function(e) { console.error(e); updateConnStatus(); return null; }); }
+    var fp=false; function fitPreview() { if(!container||!scaleEl||!cover||scaleEl.style.display==='none')return; scaleEl.style.transform='none';scaleEl.style.width='auto';scaleEl.style.height='auto'; var cw=cover.scrollWidth,ch=cover.scrollHeight; if(cw===0||ch===0){if(!fp){fp=true;requestAnimationFrame(function(){fp=false;fitPreview();});}return;} var aw=container.clientWidth-(isMob()?8:32),ah=container.clientHeight-(isMob()?8:32); var s=Math.min(aw/cw,ah/ch,1.0); scaleEl.style.transform='scale('+s+')';scaleEl.style.transformOrigin='top center'; scaleEl.style.width=Math.round(cw*s)+'px';scaleEl.style.height=Math.round(ch*s)+'px'; scaleEl.style.maxWidth='100%';scaleEl.style.maxHeight='100%'; } var dbt;function dfit(d){d=d||100;clearTimeout(dbt);dbt=setTimeout(fitPreview,d);}
+    var editing=false,ESEL='td, .cover-department, .cover-university, .cover-title, .faculty-block, .student-info';
+    function actEdit(){if(!cover)return;var ns=cover.querySelectorAll(ESEL);for(var i=0;i<ns.length;i++){var el=ns[i];if(el.tagName==='TD'&&el.querySelector('img'))continue;el.setAttribute('data-orig',el.textContent.trim());el.setAttribute('contenteditable','true');}cover.classList.add('editing-active');editing=true;updEBtn();}
+    function deactEdit(){if(!cover)return;var ns=cover.querySelectorAll('[contenteditable]');for(var i=0;i<ns.length;i++){var el=ns[i];var fn=el.getAttribute('data-field')||el.className||el.tagName;var o=el.getAttribute('data-orig')||'';var c=el.textContent.trim();if(o!==c&&fn){logEdit({rollNumber:currentStudentData?currentStudentData.studentId:(rollInput?rollInput.value.trim():''),courseCode:currentCourseData?currentCourseData.courseCode:(courseSelect?courseSelect.value:''),field:fn,oldValue:o,newValue:c,experimentNum:currentExperimentData?currentExperimentData.num:'',experimentName:currentExperimentData?currentExperimentData.title:''});}el.removeAttribute('contenteditable');el.removeAttribute('data-orig');}cover.classList.remove('editing-active');editing=false;updEBtn();}
+    function updEBtn(){if(!editBtn)return;if(editing){editBtn.innerHTML='💾 Save Edit';editBtn.classList.add('saving');}else{editBtn.innerHTML='✏️ Edit';editBtn.classList.remove('saving');}}
+    function togEdit(){editing?deactEdit():actEdit();}
+    function updatePreview(cd,ed,sd){if(!cover)return;if(cd){setF('course-code','<strong>'+esc(cd.courseCode)+'</strong>');setF('course-title',esc(cd.courseTitle||''));setF('department','Department of <strong>'+esc(cd.department||'EEE')+'</strong>');updateFac(cd.facultyMembers||[],cd.department);setF('cover-type',(cd.courseType==='theory')?'Assignment':'Lab Report');}if(ed){setF('experiment-no',esc(ed.num||''));setF('experiment-name',esc(ed.title||''));}if(sd){var nm=sd.fullName||'',id=sd.studentId||'',sess=sd.session||deriveSess(id)||'',sem=(cd&&cd.semesterText)?cd.semesterText:'',dept=(cd&&cd.department)?cd.department:(sd.department||'EEE');setF('student','Name: <strong>'+esc(nm)+'</strong><br>ID: <strong>'+esc(id)+'</strong><br>'+(sess?'Session: '+esc(sess)+'<br>':'')+(sem?esc(sem)+'<br>':'')+'Dept. of '+esc(dept)+'<br>University of Chittagong');}setF('experiment-date',expDateInput&&expDateInput.value?fmtDate(expDateInput.value):'');setF('submission-date',subDateInput&&subDateInput.value?fmtDate(subDateInput.value):'');}
+    function setF(fn,h){if(!cover)return;var e=cover.querySelector('[data-field="'+fn+'"]');if(e)e.innerHTML=h;}
+    function updateFac(fm,dept){if(!cover)return;var fc=cover.querySelector('[data-field="faculty"]');if(!fc)return;if(!fm||fm.length===0){fc.innerHTML='<div class="faculty-block"><strong>—</strong><br>—<br>Dept. of '+esc(dept||'EEE')+'<br>University of Chittagong</div>';return;}var h='';fm.forEach(function(f){var nm=f.name||'—',ds=f.designation||f.title||'—',dp=f.department||dept||'EEE';h+='<div class="faculty-block"><strong>'+esc(nm)+'</strong><br>'+esc(ds)+'<br>Dept. of '+esc(dp)+'<br>University of Chittagong</div>';});fc.innerHTML=h;}
+    function fmtDate(d){if(!d)return'';var p=d.split('-');if(p.length!==3)return d;var y=+p[0],m=+p[1]-1,day=+p[2],ms=['January','February','March','April','May','June','July','August','September','October','November','December'];if(m<0||m>11||isNaN(day))return d;return ms[m]+' '+day+', '+y;}
+    function esc(s){if(!s)return'';s=String(s);return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+
+    function handleGen(){if(!loaded){alert('Still loading.');return;}if(editing)deactEdit();var sc=courseSelect?courseSelect.value:null,sei=experimentSelect?experimentSelect.value:null,sid=rollInput?rollInput.value.trim():'';if(!sc){alert('Select a course.');return;}if(sei===''||sei===null){alert('Select an experiment.');return;}if(!sid){alert('Enter roll number.');return;}var cd=courseCache[sc];if(!cd){alert('Course not found.');return;}var exps=getExperiments(sc),ed=exps[parseInt(sei)]||null;if(!ed){alert('Experiment not found.');return;}currentCourseData=cd;currentExperimentData=ed;hideLoading();updatePreview(cd,ed,null);var cached=studentCache[sid];if(cached){currentStudentData=cached;updatePreview(cd,ed,cached);showL('✓ Found','s');if(nameInput&&cached.fullName)nameInput.value=cached.fullName;logGenD(cd,ed,cached);scrollToPrev();}else{showL('Searching...','');setSyncing('Looking up...');lookupStu(sid).then(function(s){if(s){currentStudentData=s;updatePreview(cd,ed,s);showL('✓ '+s.fullName,'s');if(nameInput&&s.fullName)nameInput.value=s.fullName;logGenD(cd,ed,s);}else{var man={fullName:nameInput?nameInput.value.trim()||sid:sid,studentId:sid,session:deriveSess(sid),department:cd.department||'EEE'};currentStudentData=man;updatePreview(cd,ed,man);showL('⚠ Not in DB','w');logGenD(cd,ed,man);}updateConnStatus();scrollToPrev();dfit(80);});}dfit(80);}
+    function scrollToPrev(){if(!isMob())return;if(!previewPanel)return;setTimeout(function(){previewPanel.scrollIntoView({behavior:'smooth',block:'start'});},200);}
+    function logGenD(cd,ed,s){var fn='';if(cd.facultyMembers&&cd.facultyMembers.length>0)fn=cd.facultyMembers[0].name||'';incCounter();logGen({courseCode:cd.courseCode,courseTitle:cd.courseTitle,experimentNum:ed.num||'',experimentName:ed.title||'',facultyName:fn,facultyMembers:cd.facultyMembers||[],rollNumber:s.studentId||'',studentName:s.fullName||'',session:s.session||'',experimentDate:expDateInput?expDateInput.value:'',submissionDate:subDateInput?subDateInput.value:''});}
+    function showL(m,t){if(!lookupResult)return;lookupResult.textContent=m;lookupResult.style.color=t==='s'?'var(--success)':t==='w'?'var(--warning)':'var(--text-muted)';}
+    function handlePrint(){if(editing)deactEdit();logPrint({rollNumber:currentStudentData?currentStudentData.studentId:(rollInput?rollInput.value.trim():''),courseCode:currentCourseData?currentCourseData.courseCode:(courseSelect?courseSelect.value:''),courseTitle:currentCourseData?currentCourseData.courseTitle:'',experimentNum:currentExperimentData?currentExperimentData.num:'',experimentName:currentExperimentData?currentExperimentData.title:'',studentName:currentStudentData?currentStudentData.fullName:(nameInput?nameInput.value.trim():'')});window.print();}
+    function handlePDF(){if(editing)deactEdit();if(!cover||typeof html2canvas==='undefined'||typeof jspdf==='undefined'){alert('PDF library not loaded.');return;}pdfBtn.disabled=true;pdfBtn.textContent='⏳ Generating...';var cd=currentCourseData||{};var roll=rollInput?rollInput.value.trim():'cover';var fname='CoverPage_'+cd.courseCode+'_'+roll;var origStyle=cover.style.cssText;cover.style.transform='none';cover.style.width='210mm';cover.style.minHeight='297mm';cover.style.maxWidth='none';cover.style.margin='0 auto';cover.style.position='relative';cover.style.left='0';setTimeout(function(){html2canvas(cover,{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,width:cover.scrollWidth,height:cover.scrollHeight}).then(function(canvas){cover.style.cssText=origStyle;var imgData=canvas.toDataURL('image/jpeg',0.95);var pdf=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});var pdfW=210;var pdfH=297;var imgW=canvas.width;var imgH=canvas.height;var ratio=Math.min(pdfW/imgW,pdfH/imgH);var finalW=imgW*ratio;var finalH=imgH*ratio;var xOff=(pdfW-finalW)/2;var yOff=(pdfH-finalH)/2;pdf.addImage(imgData,'JPEG',xOff,yOff,finalW,finalH);pdf.save(fname+'.pdf');pdfBtn.disabled=false;pdfBtn.textContent='📄 PDF';}).catch(function(err){cover.style.cssText=origStyle;console.error(err);alert('PDF generation failed. Try Print instead.');pdfBtn.disabled=false;pdfBtn.textContent='📄 PDF';});},300);}
+    function onCC(){var c=this.value;if(!c){if(experimentSelect){experimentSelect.innerHTML='<option value="">Select a course first...</option>';experimentSelect.disabled=true;}currentCourseData=null;currentExperimentData=null;return;}var cd=courseCache[c];if(!cd)return;currentCourseData=cd;currentExperimentData=null;populateExperiments(getExperiments(c));updatePreview(cd,null,null);hideLoading();dfit(80);}
+    function onEC(){var c=courseSelect?courseSelect.value:null,i=this.value;if(c===null||i===''||i===null){currentExperimentData=null;return;}var cd=courseCache[c],exps=getExperiments(c),ed=exps[parseInt(i)]||null;currentExperimentData=ed;updatePreview(cd,ed,null);hideLoading();dfit(80);}
+    var stt;function onRI(){clearTimeout(stt);var v=this.value.trim();if(v.length>=3){showL('Searching...','');stt=setTimeout(function(){lookupStu(v).then(function(s){if(s){currentStudentData=s;showL('✓ '+s.fullName,'s');if(nameInput&&s.fullName)nameInput.value=s.fullName;}else{currentStudentData=null;showL('⚠ Not in DB','w');}});},500);}else if(v.length===0){currentStudentData=null;showL('','');}}
+    function onNI(){showL('','');}
+    function onDC(){updatePreview(null,null,null);dfit(80);}
+    function setupIF(){var imgs=document.querySelectorAll('.cover-header img,.sidebar-logo');for(var i=0;i<imgs.length;i++){(function(img){img.addEventListener('error',function(){var s=document.createElement('span');s.textContent='🏛️';s.style.cssText='font-size:52px;display:block;text-align:center';if(img.parentNode)img.parentNode.replaceChild(s,img);});if(img.complete&&img.naturalWidth===0)img.dispatchEvent(new Event('error'));})(imgs[i]);}}
+    function setupMobileFeatures(){if(!isMob())return;if(!formPanelEl||!formToggleBtn)return;formToggleBtn.addEventListener('click',function(e){e.stopPropagation();toggleFP();});formPanelEl.querySelector('.form-panel-header').addEventListener('click',function(e){if(isFormCollapsed&&e.target!==formToggleBtn)toggleFP();});}
+    function toggleFP(){isFormCollapsed?expandFP():collapseFP();}
+    function collapseFP(){if(!formPanelEl||!formToggleBtn)return;formPanelEl.classList.add('collapsed');formToggleBtn.textContent='▼';formToggleBtn.setAttribute('aria-label','Expand form panel');isFormCollapsed=true;}
+    function expandFP(){if(!formPanelEl||!formToggleBtn)return;formPanelEl.classList.remove('collapsed');formToggleBtn.textContent='▲';formToggleBtn.setAttribute('aria-label','Collapse form panel');isFormCollapsed=false;}
+
+    function init(){setupIF();setupMobileFeatures();if(!initFirebase()){updateConnStatus();return;}monitorConnection();fetchCourses().then(function(){console.log('Ready');}).catch(function(e){console.error(e);});if(document.readyState==='complete')setTimeout(fitPreview,100);else window.addEventListener('load',function(){setTimeout(fitPreview,100);});setTimeout(fitPreview,500);setTimeout(fitPreview,1500);window.addEventListener('resize',function(){dfit(150);});if(window.ResizeObserver&&container){try{var ro=new ResizeObserver(function(){dfit(150);});ro.observe(container);}catch(e){}}if(cover&&window.MutationObserver){var mo=new MutationObserver(function(){dfit(200);});mo.observe(cover,{childList:true,subtree:true,characterData:true});}    if(editBtn)editBtn.addEventListener('click',togEdit);if(printBtn)printBtn.addEventListener('click',handlePrint);if(genBtn)genBtn.addEventListener('click',handleGen);if(courseSelect)courseSelect.addEventListener('change',onCC);if(experimentSelect)experimentSelect.addEventListener('change',onEC);if(rollInput)rollInput.addEventListener('input',onRI);if(nameInput)nameInput.addEventListener('input',onNI);if(expDateInput)expDateInput.addEventListener('change',onDC);if(subDateInput)subDateInput.addEventListener('change',onDC);if(pdfBtn)pdfBtn.addEventListener('click',handlePDF);updateConnStatus();}
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+})();
+</script>
+</body>
+</html>

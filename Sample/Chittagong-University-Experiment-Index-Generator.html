@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=2.0, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="theme-color" content="#037d73">
+    <title>CU | Index Page Generator</title>
+    <link rel="icon" href="culogo.png" type="image/png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- PDF generation libraries -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+    <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.0.2/firebase-database-compat.js"></script>
+
+    <style>
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        :root {
+            --primary: #037d73;
+            --primary-dark: #025b54;
+            --primary-light: #e0f2f1;
+            --accent: #ff7e33;
+            --bg: #f5f7fa;
+            --surface: #ffffff;
+            --border: #e2e8f0;
+            --text: #1e293b;
+            --text-muted: #94a3b8;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+            --danger-light: #fef2f2;
+            --touch-target: 44px;
+            --safe-area-bottom: env(safe-area-inset-bottom, 16px);
+            --radius-sm: 8px;
+        }
+
+        html, body {
+            height: 100%;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            line-height: 1.5;
+            -webkit-tap-highlight-color: transparent;
+            -webkit-font-smoothing: antialiased;
+            overflow: hidden;
+        }
+
+        /* ==========================================================================
+           COMMON HEADER
+           ========================================================================== */
+        #mainHeader {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            z-index: 50;
+            position: relative;
+            flex-shrink: 0;
+        }
+        @media (min-width: 768px) {
+            #mainHeader { position: sticky; top: 0; box-shadow: var(--shadow-sm); }
+        }
+        .header-container { max-width: 1400px; margin: 0 auto; padding: 10px 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 56px; }
+        .header-logo-link { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); flex-shrink: 0; }
+        .header-logo-link:hover { opacity: 0.85; }
+        .header-logo { width: 36px; height: auto; }
+        .header-site-name { font-size: 17px; font-weight: 700; color: var(--primary); letter-spacing: -0.3px; }
+        .header-desktop-nav { display: none; align-items: center; gap: 6px; }
+        @media (min-width: 768px) { .header-desktop-nav { display: flex; } }
+        .header-desktop-nav-item { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; border-radius: var(--radius-sm); color: #475569; font-size: 13px; font-weight: 500; white-space: nowrap; cursor: default; }
+        .header-desktop-nav-item:hover { background: var(--primary-light); color: var(--primary); }
+        .header-desktop-nav-item i { font-size: 13px; }
+        .header-mobile-menu-btn { display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; background: transparent; border: 2px solid var(--border); border-radius: var(--radius-sm); color: var(--text); font-size: 18px; cursor: pointer; transition: all 0.2s; -webkit-tap-highlight-color: transparent; }
+        .header-mobile-menu-btn:hover { border-color: var(--primary); color: var(--primary); }
+        @media (min-width: 768px) { .header-mobile-menu-btn { display: none; } }
+        .header-mobile-menu { position: fixed; top: 0; right: -320px; width: 300px; max-width: 85vw; height: 100vh; height: 100dvh; background: var(--surface); z-index: 60; box-shadow: -4px 0 20px rgba(0,0,0,0.15); transition: right 0.3s cubic-bezier(0.4, 0, 0.2, 1); display: flex; flex-direction: column; padding: 0; }
+        .header-mobile-menu.open { right: 0; }
+        .header-mobile-menu-top { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--border); }
+        .header-mobile-menu-top .header-site-name { font-size: 17px; font-weight: 700; color: var(--primary); }
+        .header-mobile-menu-close { width: 36px; height: 36px; border-radius: 50%; border: 2px solid var(--border); background: transparent; color: var(--text); font-size: 16px; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.2s; }
+        .header-mobile-menu-close:hover { background: var(--danger-light); border-color: var(--danger); color: var(--danger); }
+        .header-mobile-menu nav { flex: 1; padding: 20px; display: flex; flex-direction: column; gap: 4px; }
+        .header-mobile-nav-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border-radius: 10px; color: var(--text); font-size: 15px; font-weight: 500; cursor: default; }
+        .header-mobile-nav-item:hover { background: var(--primary-light); color: var(--primary); }
+        .header-mobile-nav-item i { font-size: 16px; width: 22px; text-align: center; }
+        .header-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.4); z-index: 55; opacity: 0; transition: opacity 0.3s; }
+        .header-overlay.show { display: block; opacity: 1; }
+
+        .app-layout { display: flex; height: 100vh; height: 100dvh; width: 100vw; overflow: hidden; }
+        @media (min-width: 768px) { .app-layout { height: calc(100vh - 56px); height: calc(100dvh - 56px); } }
+        @media (max-width: 767px) { .app-layout { height: auto; min-height: 100vh; min-height: 100dvh; } }
+
+        .sidebar { width: 220px; min-width: 220px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; overflow-y: auto; z-index: 100; }
+        .sidebar-brand { text-align: center; padding: 28px 16px 18px; border-bottom: 1px solid var(--border); }
+        .sidebar-logo { width: 52px; height: auto; margin-bottom: 10px; }
+        .sidebar-title { font-size: 14px; font-weight: 700; color: var(--primary); margin: 0 0 2px; }
+        .sidebar-subtitle { font-size: 10px; color: var(--text-muted); margin: 0; }
+        .sidebar-nav { padding: 12px; flex: 1; display: flex; flex-direction: column; gap: 2px; }
+        .sidebar-nav-link { display: flex; align-items: center; gap: 10px; padding: 10px 14px; border-radius: 6px; color: #475569; font-size: 13px; font-weight: 500; transition: all 0.15s ease; cursor: default; }
+        .sidebar-nav-link:hover { background: var(--primary-light); color: var(--primary); }
+        .sidebar-nav-link.active { background: var(--primary-light); color: var(--primary); font-weight: 600; }
+        .nav-icon { font-size: 15px; width: 22px; text-align: center; flex-shrink: 0; }
+
+        .main-area { flex: 1; display: flex; min-width: 0; height: 100%; overflow: hidden; }
+
+        .form-panel { width: 380px; min-width: 320px; background: var(--surface); border-right: 1px solid var(--border); display: flex; flex-direction: column; height: 100%; }
+        .form-panel-header { padding: 16px 20px 12px; border-bottom: 1px solid var(--border); flex-shrink: 0; position: relative; }
+        .form-panel-header h2 { font-size: 16px; font-weight: 700; color: var(--primary); margin: 0 0 2px; }
+        .form-panel-header p { font-size: 11px; color: var(--text-muted); margin: 0; }
+        .sync-status { display: flex; align-items: center; gap: 6px; margin-top: 6px; font-size: 10px; font-weight: 500; }
+        .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--text-muted); transition: background 0.3s; }
+        .sync-dot.connected { background: var(--success); }
+        .sync-dot.disconnected { background: var(--danger); }
+        .sync-dot.syncing { background: var(--warning); animation: pulse 1s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
+        .form-scroll { flex: 1; overflow-y: auto; padding: 16px 20px 20px; -webkit-overflow-scrolling: touch; }
+
+        .form-block { margin-bottom: 18px; }
+        .form-block-title { font-size: 12px; font-weight: 600; color: var(--primary); margin-bottom: 10px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .form-group { margin-bottom: 14px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 500; color: #475569; margin-bottom: 5px; }
+        .form-group input, .form-group select { width: 100%; padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 8px; font-family: inherit; font-size: 14px; color: var(--text); background: #fafbfc; transition: border-color 0.2s, box-shadow 0.2s; -webkit-appearance: none; appearance: none; min-height: var(--touch-target); }
+        .form-group select { background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23475569' d='M6 8L1 3h10z'/%3E%3C/svg%3E"); background-repeat: no-repeat; background-position: right 12px center; padding-right: 32px; }
+        .form-group input:focus, .form-group select:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(3,125,115,0.1); }
+        .form-group input:disabled, .form-group select:disabled { background: #f1f5f9; color: var(--text-muted); cursor: not-allowed; }
+        .form-divider { border: none; border-top: 1px solid var(--border); margin: 16px 0; }
+
+        .btn-primary { width: 100%; padding: 14px 16px; background: var(--primary); color: #fff; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all 0.2s; min-height: var(--touch-target); -webkit-tap-highlight-color: transparent; }
+        .btn-primary:hover:not(:disabled) { background: var(--primary-dark); transform: translateY(-1px); }
+        .btn-primary:active:not(:disabled) { transform: scale(0.98); }
+        .btn-primary:disabled { background: #94a3b8; cursor: not-allowed; transform: none; }
+
+        .action-row { display: flex; gap: 8px; margin-top: 14px; }
+        .action-row .btn-action { flex: 1; display: flex; align-items: center; justify-content: center; gap: 5px; padding: 12px 14px; border-radius: 10px; font-size: 14px; font-weight: 600; cursor: pointer; transition: all 0.2s; min-height: var(--touch-target); border: 2px solid var(--primary); -webkit-tap-highlight-color: transparent; }
+        .btn-edit { background: var(--surface); color: var(--primary); }
+        .btn-edit:hover { background: var(--primary-light); }
+        .btn-edit.saving { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+        .btn-print { background: var(--primary); color: #fff; }
+        .btn-print:hover { background: var(--primary-dark); }
+        .btn-pdf { background: var(--accent); color: #fff; border-color: var(--accent); }
+        .btn-pdf:hover { background: #e66a1a; }
+
+        .form-panel-toggle { display: none; position: absolute; top: 12px; right: 16px; width: 40px; height: 40px; background: var(--primary-light); border: 2px solid var(--primary); border-radius: 50%; font-size: 18px; cursor: pointer; z-index: 20; transition: all 0.25s ease; align-items: center; justify-content: center; color: var(--primary); -webkit-tap-highlight-color: transparent; box-shadow: var(--shadow-sm); }
+        .form-panel-toggle:active { transform: scale(0.92); background: var(--primary); color: white; }
+
+        .preview-panel { flex: 1; display: flex; flex-direction: column; height: 100%; min-width: 0; background: var(--bg); }
+        .preview-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 20px; background: var(--surface); border-bottom: 1px solid var(--border); flex-shrink: 0; }
+        .preview-header h3 { font-size: 13px; font-weight: 600; color: var(--primary); margin: 0; }
+        .preview-badge { font-size: 10px; padding: 3px 8px; background: var(--primary-light); color: var(--primary); border-radius: 10px; font-weight: 500; }
+        .preview-container { flex: 1; display: flex; justify-content: center; align-items: flex-start; padding: 16px; overflow: auto; min-height: 0; -webkit-overflow-scrolling: touch; }
+        .preview-scale { transform-origin: top center; transition: transform 0.15s ease; }
+
+        .index-page { --cvr-primary: #003366; --cvr-primary-dark: #002244; --cvr-primary-light: #eef2ff; --cvr-accent: #FFCC00; width: 210mm; min-height: 297mm; padding: 28px 32px; background: #ffffff; color: #111111; border: 2px solid var(--cvr-primary); box-shadow: var(--shadow-md); border-radius: 2px; font-family: "Times New Roman", Times, serif; line-height: 1.6; position: relative; display: block; flex-shrink: 0; }
+        .index-page::before { content: ""; position: absolute; inset: 8px; border: 1px solid var(--cvr-primary); pointer-events: none; }
+        .index-title-block { text-align: center; margin: 40px 0 30px; }
+        .index-title { display: inline-block; font-family: Arial, Helvetica, sans-serif; font-size: 24pt; font-weight: 700; color: var(--cvr-primary); text-transform: uppercase; letter-spacing: 3px; padding: 6px 30px; border-top: 2px solid var(--cvr-primary); border-bottom: 2px solid var(--cvr-primary); }
+        .index-table { width: 100%; border-collapse: collapse; border: 1.4px solid #111111; table-layout: fixed; }
+        .index-table th, .index-table td { padding: 12px 14px; border: 1px solid #111111; font-size: 13pt; vertical-align: middle; }
+        .index-table thead th { background-color: var(--cvr-primary-light); color: var(--cvr-primary); font-weight: 700; text-align: center; font-size: 13pt; }
+        .index-table .col-no { width: 15%; text-align: center; }
+        .index-table .col-name { width: 60%; }
+        .index-table .col-page { width: 25%; text-align: center; }
+        .index-table tbody td { color: #111111; }
+        .index-table tbody td.col-no, .index-table tbody td.col-page { text-align: center; }
+        .index-table tbody tr:nth-child(even) { background-color: #fafbfc; }
+        .index-page.editing-active td, .index-page.editing-active th { outline: 2px dashed #94a3b8; outline-offset: 1px; cursor: text; }
+        .index-page.editing-active .index-title { outline: 2px dashed #94a3b8; outline-offset: 1px; cursor: text; }
+        .index-page.editing-active [contenteditable="true"]:focus { outline: 2px solid #3b82f6 !important; outline-offset: 1px; background-color: rgba(59,130,246,0.06); }
+
+        .loading-overlay, .error-state { display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 12px; padding: 40px; color: var(--text-muted); font-size: 14px; min-height: 50vh; }
+        .loading-spinner { width: 32px; height: 32px; border: 3px solid var(--border); border-top-color: var(--primary); border-radius: 50%; animation: spin 0.8s linear infinite; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .error-state { color: var(--danger); text-align: center; }
+        .error-state button { margin-top: 8px; padding: 12px 24px; background: var(--primary); color: #fff; border: none; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; min-height: var(--touch-target); }
+
+        .mobile-header-section { display: none; background: linear-gradient(135deg, var(--primary) 0%, #025b54 100%); position: sticky; top: 0; z-index: 20; box-shadow: 0 4px 20px rgba(0,0,0,0.2); }
+        .mobile-university-header { text-align: center; padding: 14px 16px 6px; color: #fff; }
+        .mobile-university-logo { width: 42px; height: auto; margin-bottom: 4px; filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3)); }
+        .mobile-header-title { font-size: 13px; font-weight: 600; margin: 0; color: rgba(255,255,255,0.95); letter-spacing: 0.5px; }
+
+        .mobile-nav { display: none; flex-shrink: 0; background: var(--surface); border-top: 2px solid var(--primary); padding: 6px 4px; padding-bottom: max(6px, env(safe-area-inset-bottom)); justify-content: space-around; align-items: center; box-shadow: 0 -4px 20px rgba(0,0,0,0.1); z-index: 10; position: fixed; bottom: 0; left: 0; right: 0; }
+        .mobile-nav-item { display: flex; flex-direction: column; align-items: center; color: #64748b; font-size: 10px; font-weight: 600; gap: 3px; padding: 8px 10px; border-radius: 12px; transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); -webkit-tap-highlight-color: transparent; min-width: 52px; position: relative; cursor: default; }
+        .mobile-nav-item .nav-icon { font-size: 22px; line-height: 1; }
+        .mobile-nav-item.active { color: #fff; background: linear-gradient(135deg, var(--primary), #025b54); box-shadow: 0 4px 15px rgba(3,125,115,0.4); transform: translateY(-3px); }
+        .mobile-nav-item.active .nav-icon { transform: scale(1.15); animation: bounce 0.6s ease; }
+        .mobile-nav-item.active::after { content: ''; position: absolute; bottom: -2px; left: 50%; transform: translateX(-50%); width: 20px; height: 3px; background: var(--accent); border-radius: 3px; }
+        @keyframes bounce { 0%, 100% { transform: scale(1.15); } 50% { transform: scale(1.35); } }
+
+        @media (min-width: 768px) and (max-width: 1023px) { .sidebar { display: none; } .form-panel { width: 340px; min-width: 280px; } .preview-container { padding: 12px; } .mobile-nav { display: none !important; } .mobile-header-section { display: none !important; } }
+
+        @media (max-width: 767px) {
+            html, body { overflow-x: hidden; overflow-y: auto; position: static; width: 100%; height: auto; padding-bottom: 80px; background: var(--bg); }
+            .mobile-header-section { display: block; }
+            .sidebar { display: none; }
+            .preview-header { display: none; }
+            .app-layout { flex-direction: column; height: auto; overflow: visible; min-height: 100vh; min-height: 100dvh; }
+            .main-area { flex-direction: column; height: auto; overflow: visible; flex: 1; }
+            .form-panel { width: 100%; min-width: 0; height: auto; max-height: none; border-right: none; border-bottom: 3px solid var(--primary); border-radius: 0; box-shadow: 0 4px 20px rgba(0,0,0,0.1); display: block; background: var(--surface); overflow: visible; }
+            .form-panel-header { padding: 14px 16px 10px; text-align: center; background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border-bottom: 2px solid var(--border); position: relative; }
+            .form-panel-header h2 { font-size: 18px; color: var(--primary); }
+            .form-panel-header p { font-size: 12px; }
+            .sync-status { justify-content: center; font-size: 11px; }
+            .form-scroll { padding: 12px 16px 16px; overflow-y: visible; max-height: none; touch-action: pan-y; }
+            .form-block-title { font-size: 13px; letter-spacing: 0.8px; color: var(--primary); border-left: 4px solid var(--accent); padding-left: 10px; }
+            .form-group label { font-size: 13px; font-weight: 600; color: var(--primary-dark); }
+            .form-group input, .form-group select { font-size: 16px; padding: 14px 16px; min-height: 50px; border-radius: 12px; border-width: 2px; transition: all 0.3s; background: #fafbfc; }
+            .form-group input:focus, .form-group select:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(3,125,115,0.1); background: #fff; }
+            .btn-primary { font-size: 17px; padding: 16px; min-height: 54px; border-radius: 14px; font-weight: 700; letter-spacing: 0.3px; background: linear-gradient(135deg, var(--primary), #025b54); box-shadow: 0 4px 15px rgba(3,125,115,0.3); margin-top: 8px; }
+            .action-row { margin-top: 16px; padding-bottom: 8px; }
+            .action-row .btn-action { font-size: 15px; padding: 14px; min-height: 50px; border-radius: 12px; font-weight: 600; }
+            .preview-panel { width: 100%; height: auto; min-height: auto; z-index: auto; border-top: none; padding-bottom: 20px; background: var(--bg); }
+            .preview-container { padding: 16px 12px; overflow: visible; min-height: auto; padding-bottom: 12px; display: flex; justify-content: center; }
+            .index-page { padding: 20px 14px; min-height: auto; border-radius: 8px; box-shadow: 0 4px 20px rgba(0,0,0,0.1); width: 100%; max-width: 100%; margin: 0 auto; }
+            .index-title { font-size: 18pt; padding: 4px 20px; }
+            .index-table th, .index-table td { padding: 8px 6px; font-size: 10pt; }
+            .loading-overlay, .error-state { padding: 60px 20px; font-size: 15px; min-height: 40vh; }
+            .mobile-nav { display: flex; }
+            .form-panel-toggle { display: flex; top: 10px; right: 10px; width: 36px; height: 36px; font-size: 16px; }
+            .form-panel.collapsed .form-scroll { display: none; }
+            .form-panel.collapsed .form-panel-header { padding: 12px 16px; }
+            .form-panel.collapsed .form-panel-header p, .form-panel.collapsed .sync-status { display: none; }
+            .form-panel.collapsed .form-panel-header h2 { font-size: 15px; margin: 0; }
+        }
+
+        @media (max-width: 379px) {
+            .form-panel-header h2 { font-size: 16px; }
+            .form-scroll { padding: 10px 14px 20px; }
+            .index-page { padding: 14px 8px; }
+            .index-title { font-size: 15pt; }
+            .index-table th, .index-table td { padding: 5px 4px; font-size: 8pt; }
+            .mobile-nav-item { font-size: 9px; padding: 6px 8px; min-width: 44px; }
+            .mobile-nav-item .nav-icon { font-size: 18px; }
+        }
+
+        @media print {
+            @page { size: A4; margin: 15mm; }
+            html, body { height: auto; overflow: visible; background: white; position: static; padding-bottom: 0; }
+            #mainHeader, .sidebar, .form-panel, .preview-header, .preview-badge, .mobile-nav,
+            .app-layout > *:not(.main-area), .main-area > *:not(.preview-panel),
+            .loading-overlay, .error-state, .mobile-header-section, .header-overlay, .header-mobile-menu { display: none !important; }
+            .app-layout, .main-area, .preview-panel, .preview-container { display: block !important; height: auto !important; width: 100% !important; overflow: visible !important; background: white !important; border: none !important; box-shadow: none !important; margin: 0 !important; padding: 0 !important; position: static !important; }
+            .preview-scale { transform: none !important; width: 100% !important; height: auto !important; }
+            .index-page { display: block !important; width: 100% !important; height: auto !important; min-height: 0 !important; margin: 0 !important; padding: 20px 0 !important; border: none !important; box-shadow: none !important; border-radius: 0 !important; position: static !important; page-break-inside: avoid; background: white !important; }
+            .index-page::before { display: none !important; }
+            .index-page.editing-active td, .index-page.editing-active th, .index-page.editing-active div { outline: none !important; background: transparent !important; cursor: default !important; }
+            .index-table th { background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        }
+    </style>
+  <!-- Google Analytics removed for independence -->
+</head>
+<body>
+
+    <!-- Common Header -->
+    <header id="mainHeader">
+        <div class="header-container">
+            <div class="header-logo-link">
+                <img src="culogo.png" alt="CU logo" class="header-logo" onerror="this.style.display='none'">
+            </div>
+            <nav class="header-desktop-nav">
+                <span class="header-desktop-nav-item"><i class="fas fa-tools"></i> Tools</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-desktop-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+            <button class="header-mobile-menu-btn" aria-label="Open menu"><i class="fas fa-bars"></i></button>
+        </div>
+        <div class="header-mobile-menu" id="headerMobileMenu">
+            <div class="header-mobile-menu-top">
+                <span class="header-site-name">Chittagong University</span>
+                <button class="header-mobile-menu-close" aria-label="Close menu"><i class="fas fa-times"></i></button>
+            </div>
+            <nav>
+                <span class="header-mobile-nav-item"><i class="fas fa-tools"></i> All Tools</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-info-circle"></i> About</span>
+                <span class="header-mobile-nav-item"><i class="fas fa-envelope"></i> Contact</span>
+            </nav>
+        </div>
+        <div class="header-overlay" id="headerOverlay"></div>
+    </header>
+
+    <div class="app-layout">
+        <aside class="sidebar">
+            <div class="sidebar-brand">
+                <img src="culogo.png" alt="Logo" class="sidebar-logo" onerror="this.style.display='none'">
+                <div class="sidebar-title">Chittagong University</div>
+                <div class="sidebar-subtitle"></div>
+            </div>
+            <nav class="sidebar-nav">
+                <span class="sidebar-nav-link"><span class="nav-icon">📋</span> Experiment Cover</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">📄</span> Main Cover Page</span>
+                <span class="sidebar-nav-link active"><span class="nav-icon">📑</span> Index Page</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">📝</span> Assignment Cover</span>
+                <span class="sidebar-nav-link"><span class="nav-icon">⚙️</span> Admin Panel</span>
+            </nav>
+        </aside>
+
+        <div class="main-area">
+           
+
+            <div class="form-panel" id="formPanel">
+                <div class="form-panel-header">
+                    <h2>Index Page Generator</h2>
+                    <p>Select a lab course to generate index</p>
+                    <div class="sync-status">
+                        <span class="sync-dot disconnected" id="syncDot"></span>
+                        <span id="syncText">Connecting...</span>
+                    </div>
+                    <button class="form-panel-toggle" id="formPanelToggle" aria-label="Collapse form panel" title="Collapse form">▲</button>
+                </div>
+                <div class="form-scroll">
+                    <div class="form-block">
+                        <div class="form-block-title">Course Information</div>
+                        <div class="form-group">
+                            <label for="courseSelect">Select Course (Lab only)</label>
+                            <select id="courseSelect" disabled><option value="">Loading courses...</option></select>
+                        </div>
+                    </div>
+                    <hr class="form-divider">
+                    <button type="button" class="btn-primary" id="generateBtn" disabled>🔄 Generate Index Page</button>
+                    <div class="action-row">
+                        <button id="enableEditBtn" class="btn-action btn-edit">✏️ Edit</button>
+                        <button id="pdfBtn" class="btn-action btn-pdf">📄 PDF</button>
+                        <button id="printBtn" class="btn-action btn-print">🖨️ Print</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="preview-panel" id="previewPanel">
+                <div class="preview-header"><h3>Live Preview</h3><span class="preview-badge">A4 Document</span></div>
+                <div class="preview-container" id="previewContainer">
+                    <div class="loading-overlay" id="loadingOverlay"><div class="loading-spinner"></div><span>Connecting to database...</span></div>
+                    <div class="error-state" id="errorState" style="display:none;"><span>⚠️ Unable to connect</span><button onclick="location.reload()">Retry</button></div>
+                    <div class="preview-scale" id="previewScale" style="display:none;">
+                        <div id="indexPageOutput" class="index-page">
+                            <div class="index-title-block"><div class="index-title" data-field="index-title">Index</div></div>
+                            <table class="index-table">
+                                <thead><tr><th class="col-no">Sl. No.</th><th class="col-name">Name of the Experiment</th><th class="col-page">Page</th></tr></thead>
+                                <tbody data-field="index-rows"><tr><td class="col-no">1</td><td class="col-name">---</td><td class="col-page"></td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <nav class="mobile-nav" id="mobileNav">
+            <span class="mobile-nav-item"><span class="nav-icon">📋</span> Lab</span>
+            <span class="mobile-nav-item"><span class="nav-icon">📄</span> Cover</span>
+            <span class="mobile-nav-item active"><span class="nav-icon">📑</span> Index</span>
+            <span class="mobile-nav-item"><span class="nav-icon">📝</span> Assignment</span>
+            <span class="mobile-nav-item"><span class="nav-icon">⚙️</span> Admin</span>
+        </nav>
+    </div>
+
+    <script>
+    // Common Header Mobile Menu
+    (function() {
+        var menuBtn = document.querySelector('.header-mobile-menu-btn');
+        var menuClose = document.querySelector('.header-mobile-menu-close');
+        var menu = document.getElementById('headerMobileMenu');
+        var overlay = document.getElementById('headerOverlay');
+        if (!menuBtn || !menuClose || !menu || !overlay) return;
+        function openMenu() { menu.classList.add('open'); overlay.classList.add('show'); document.body.style.overflow = 'hidden'; }
+        function closeMenu() { menu.classList.remove('open'); overlay.classList.remove('show'); document.body.style.overflow = ''; }
+        menuBtn.addEventListener('click', openMenu);
+        menuClose.addEventListener('click', closeMenu);
+        overlay.addEventListener('click', closeMenu);
+        document.addEventListener('keydown', function(e) { if (e.key === 'Escape' && menu.classList.contains('open')) closeMenu(); });
+    })();
+
+    // Main App Script
+    (function() {
+        'use strict';
+        var firebaseConfig = {
+            apiKey: "AIzaSyAhbgEBwvfFMVsGrahhG1jtdpguT6RTh_A", authDomain: "lddb-demo.firebaseapp.com",
+            databaseURL: "https://lddb-demo-default-rtdb.firebaseio.com", projectId: "lddb-demo",
+            storageBucket: "lddb-demo.firebasestorage.app", messagingSenderId: "188976453347",
+            appId: "1:188976453347:web:c49ffcee015aa3248117d6", measurementId: "G-KY27E549BV"
+        };
+        var db = null, isConnected = false, fbReady = false;
+        var indexPage = document.getElementById('indexPageOutput'), container = document.getElementById('previewContainer'), scaleEl = document.getElementById('previewScale');
+        var loadingOverlay = document.getElementById('loadingOverlay'), errorState = document.getElementById('errorState');
+        var editBtn = document.getElementById('enableEditBtn'), printBtn = document.getElementById('printBtn'), pdfBtn = document.getElementById('pdfBtn'), genBtn = document.getElementById('generateBtn');
+        var courseSelect = document.getElementById('courseSelect'), previewPanel = document.getElementById('previewPanel');
+        var formPanelEl = document.getElementById('formPanel'), formToggleBtn = document.getElementById('formPanelToggle');
+        var currentCourseData = null, isFormCollapsed = false;
+
+        function initFirebase() { try { if (typeof firebase === 'undefined') throw new Error('Firebase SDK not loaded'); if (!firebase.apps.length) firebase.initializeApp(firebaseConfig); db = firebase.database(); fbReady = true; return true; } catch (e) { console.error(e); showError('Firebase init failed'); return false; } }
+        function monitorConnection() { if (!db) return; db.ref('.info/connected').on('value', function(s) { isConnected = s.val() === true; updateConnStatus(); }); }
+        function updateConnStatus() { var d = document.getElementById('syncDot'), t = document.getElementById('syncText'); if (!d || !t) return; if (!fbReady) { d.className = 'sync-dot disconnected'; t.textContent = 'Not initialized'; } else if (isConnected) { d.className = 'sync-dot connected'; t.textContent = 'Live'; } else { d.className = 'sync-dot disconnected'; t.textContent = 'Disconnected'; } }
+        function setSyncing(m) { var d = document.getElementById('syncDot'), t = document.getElementById('syncText'); if (d) d.className = 'sync-dot syncing'; if (t) t.textContent = m || 'Syncing...'; }
+        function showLoading() { if (loadingOverlay) loadingOverlay.style.display = 'flex'; if (errorState) errorState.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'none'; }
+        function hideLoading() { if (loadingOverlay) loadingOverlay.style.display = 'none'; if (errorState) errorState.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'block'; }
+        function showError(m) { if (loadingOverlay) loadingOverlay.style.display = 'none'; if (scaleEl) scaleEl.style.display = 'none'; if (errorState) { errorState.querySelector('span:first-child').textContent = '⚠️ ' + m; errorState.style.display = 'flex'; } }
+        function enableCtrls() { if (courseSelect) courseSelect.disabled = false; if (genBtn) genBtn.disabled = false; }
+        function isMob() { return window.innerWidth <= 767; }
+        function getDeviceInfo() { var ua = navigator.userAgent; var dt = /(tablet|ipad|playbook|silk)|(android(?!.*mobi))/i.test(ua) ? 'Tablet' : /Mobile|Android|iP(hone|od)/i.test(ua) ? 'Mobile' : 'Desktop'; var br = ua.indexOf('Firefox')>-1?'Firefox':ua.indexOf('Edg')>-1?'Edge':ua.indexOf('Chrome')>-1?'Chrome':ua.indexOf('Safari')>-1?'Safari':'Unknown'; var pl = ua.indexOf('Windows')>-1?'Windows':ua.indexOf('Mac')>-1?'macOS':ua.indexOf('Linux')>-1?'Linux':ua.indexOf('Android')>-1?'Android':/(iOS|iPhone|iPad)/.test(ua)?'iOS':'Unknown'; return { deviceType: dt, browser: br, platform: pl, screenWidth: screen.width, screenHeight: screen.height, language: navigator.language||'unknown', timezone: Intl.DateTimeFormat().resolvedOptions().timeZone||'unknown', userAgent: ua }; }
+        function logEvent(et, src, pl) { if (!db) return Promise.resolve(); var di = getDeviceInfo(); var e = { eventType: et, source: src, timestamp: firebase.database.ServerValue.TIMESTAMP, device: di, deviceType: di.deviceType, userAgent: di.userAgent }; for (var k in pl) { if (pl.hasOwnProperty(k)) e[k] = pl[k]; } var w = [db.ref('cvr3_usage/events').push(e)]; var lp = { 'GENERATE_INDEX': 'cvr3_usage/indexGenerations', 'EDIT_INDEX': 'cvr3_usage/edits', 'PRINT_INDEX': 'cvr3_usage/prints' }; if (lp[et]) w.push(db.ref(lp[et]).push(e)); return Promise.all(w).catch(function(err) { console.error('Tracker:', err); }); }
+        function logGen(d) { return logEvent('GENERATE_INDEX', 'index-generator', { courseCode: d.courseCode||'', courseTitle: d.courseTitle||'', experimentCount: d.experimentCount||0 }); }
+        function logEdit(d) { return logEvent('EDIT_INDEX', 'index-generator', { field: d.field||'', oldValue: d.oldValue||'', newValue: d.newValue||'', courseCode: d.courseCode||'' }); }
+        function logPrint(d) { return logEvent('PRINT_INDEX', 'index-generator', { courseCode: d.courseCode||'' }); }
+        function incCounter() { if (!db) return; db.ref('cvr3_meta/stats/coverpageCount').transaction(function(c) { return (c||0)+1; }).catch(function(e) { console.warn('Counter:', e); }); }
+        var courseCache = {}, labCourseList = [], loaded = false;
+
+        function fetchCourses() { if (!db) { showError('No database'); return Promise.reject(); } setSyncing('Loading...'); showLoading(); return db.ref('cvr3_courses').once('value').then(function(s) { var courses = s.val(); if (!courses) throw new Error('No courses.'); courseCache = {}; labCourseList = []; Object.keys(courses).forEach(function(c) { var o = courses[c]; courseCache[c] = { _key: c, courseCode: c, courseTitle: o.courseTitle||'', department: o.department||'EEE', courseType: o.courseType||'lab', semesterText: o.semesterText||'', experiments: Array.isArray(o.experiments)?o.experiments:[] }; if ((o.courseType||'lab')==='lab') labCourseList.push(c); }); if (!labCourseList.length) throw new Error('No lab courses.'); labCourseList.sort(); loaded = true; populateCourses(); hideLoading(); enableCtrls(); updateConnStatus(); return courseCache; }).catch(function(e) { console.error(e); showError(e.message||'Failed'); updateConnStatus(); throw e; }); }
+        function populateCourses() { if (!courseSelect) return; courseSelect.innerHTML = '<option value="">Select Course...</option>'; courseSelect.disabled = false; labCourseList.forEach(function(c) { var o = courseCache[c]; var opt = document.createElement('option'); opt.value = c; opt.textContent = c + ' - ' + (o.courseTitle||'Untitled'); courseSelect.appendChild(opt); }); }
+        var fp=false; function fitPreview() { if(!container||!scaleEl||!indexPage||scaleEl.style.display==='none')return; scaleEl.style.transform='none';scaleEl.style.width='auto';scaleEl.style.height='auto'; var cw=indexPage.scrollWidth,ch=indexPage.scrollHeight; if(cw===0||ch===0){if(!fp){fp=true;requestAnimationFrame(function(){fp=false;fitPreview();});}return;} var aw=container.clientWidth-(isMob()?8:32),ah=container.clientHeight-(isMob()?8:32); var s=Math.min(aw/cw,ah/ch,1.0); scaleEl.style.transform='scale('+s+')';scaleEl.style.transformOrigin='top center'; scaleEl.style.width=Math.round(cw*s)+'px';scaleEl.style.height=Math.round(ch*s)+'px'; } var dbt;function dfit(d){d=d||100;clearTimeout(dbt);dbt=setTimeout(fitPreview,d);}
+        var editing=false,ESEL='td, th, .index-title';
+        function actEdit(){if(!indexPage)return;var ns=indexPage.querySelectorAll(ESEL);for(var i=0;i<ns.length;i++){var el=ns[i];el.setAttribute('data-orig',el.textContent.trim());el.setAttribute('contenteditable','true');}indexPage.classList.add('editing-active');editing=true;updEBtn();}
+        function deactEdit(){if(!indexPage)return;var ns=indexPage.querySelectorAll('[contenteditable]');for(var i=0;i<ns.length;i++){var el=ns[i];var fn=el.getAttribute('data-field')||el.className||el.tagName;var o=el.getAttribute('data-orig')||'';var c=el.textContent.trim();if(o!==c&&fn){logEdit({field:fn,oldValue:o,newValue:c,courseCode:currentCourseData?currentCourseData.courseCode:(courseSelect?courseSelect.value:'')});}el.removeAttribute('contenteditable');el.removeAttribute('data-orig');}indexPage.classList.remove('editing-active');editing=false;updEBtn();}
+        function updEBtn(){if(!editBtn)return;if(editing){editBtn.innerHTML='💾 Save Edit';editBtn.classList.add('saving');}else{editBtn.innerHTML='✏️ Edit';editBtn.classList.remove('saving');}}
+        function togEdit(){editing?deactEdit():actEdit();}
+        function updateIndex(cd){if(!indexPage)return;if(cd){var exps=cd.experiments||[];var tbody=indexPage.querySelector('[data-field="index-rows"]');if(tbody){if(!exps.length){tbody.innerHTML='<tr><td class="col-no">1</td><td class="col-name">---</td><td class="col-page"></td></tr>';}else{var r='';exps.forEach(function(e,i){r+='<tr><td class="col-no">'+(i+1)+'</td><td class="col-name">'+esc(e.title||e.expTitle||'Untitled')+'</td><td class="col-page"></td></tr>';});tbody.innerHTML=r;}}}}
+        function esc(s){if(!s)return'';s=String(s);return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#039;');}
+        function handleGen(){if(!loaded){alert('Still loading.');return;}if(editing)deactEdit();var sc=courseSelect?courseSelect.value:null;if(!sc){alert('Select a course.');return;}var cd=courseCache[sc];if(!cd){alert('Course not found.');return;}if((cd.courseType||'lab')!=='lab'){alert('Only lab courses.');return;}currentCourseData=cd;hideLoading();updateIndex(cd);incCounter();logGen({courseCode:cd.courseCode,courseTitle:cd.courseTitle,experimentCount:(cd.experiments||[]).length});if(isMob()){setTimeout(function(){if(previewPanel)previewPanel.scrollIntoView({behavior:'smooth',block:'start'});},300);}dfit(80);}
+        function handlePrint(){if(editing)deactEdit();logPrint({courseCode:currentCourseData?currentCourseData.courseCode:(courseSelect?courseSelect.value:'')});window.print();}
+function handlePDF(){if(editing)deactEdit();if(!indexPage||typeof html2canvas==='undefined'||typeof jspdf==='undefined'){alert('PDF library not loaded.');return}pdfBtn.disabled=true;pdfBtn.textContent='⏳ Generating...';var cd=currentCourseData||{};var fname='IndexPage_'+cd.courseCode;var origStyle=indexPage.style.cssText;indexPage.style.transform='none';indexPage.style.width='210mm';indexPage.style.minHeight='297mm';indexPage.style.maxWidth='none';indexPage.style.margin='0 auto';indexPage.style.position='relative';indexPage.style.left='0';setTimeout(function(){html2canvas(indexPage,{scale:2,useCORS:true,allowTaint:false,backgroundColor:'#ffffff',logging:false,width:indexPage.scrollWidth,height:indexPage.scrollHeight}).then(function(canvas){indexPage.style.cssText=origStyle;var imgData=canvas.toDataURL('image/jpeg',0.95);var pdf=new jspdf.jsPDF({orientation:'portrait',unit:'mm',format:'a4'});var pdfW=210,pdfH=297,imgW=canvas.width,imgH=canvas.height;var ratio=Math.min(pdfW/imgW,pdfH/imgH);pdf.addImage(imgData,'JPEG',(pdfW-imgW*ratio)/2,(pdfH-imgH*ratio)/2,imgW*ratio,imgH*ratio);pdf.save(fname+'.pdf');pdfBtn.disabled=false;pdfBtn.textContent='📄 PDF'}).catch(function(err){indexPage.style.cssText=origStyle;console.error(err);alert('PDF generation failed. Try Print instead.');pdfBtn.disabled=false;pdfBtn.textContent='📄 PDF'})},300)}
+        function onCC(){var c=this.value;if(!c){currentCourseData=null;return;}var cd=courseCache[c];if(!cd)return;currentCourseData=cd;hideLoading();updateIndex(cd);dfit(80);}
+        function setupIF(){var imgs=document.querySelectorAll('.sidebar-logo,.mobile-university-logo');for(var i=0;i<imgs.length;i++){(function(img){img.addEventListener('error',function(){var s=document.createElement('span');s.textContent='🏛️';s.style.cssText='font-size:52px;display:block;text-align:center';if(img.parentNode)img.parentNode.replaceChild(s,img);});if(img.complete&&img.naturalWidth===0)img.dispatchEvent(new Event('error'));})(imgs[i]);}}
+        function setupMobileFeatures(){if(!isMob())return;if(!formPanelEl||!formToggleBtn)return;formToggleBtn.addEventListener('click',function(e){e.stopPropagation();toggleFP();});formPanelEl.querySelector('.form-panel-header').addEventListener('click',function(e){if(isFormCollapsed&&e.target!==formToggleBtn)toggleFP();});}
+        function toggleFP(){isFormCollapsed?expandFP():collapseFP();}
+        function collapseFP(){if(!formPanelEl||!formToggleBtn)return;formPanelEl.classList.add('collapsed');formToggleBtn.textContent='▼';formToggleBtn.setAttribute('aria-label','Expand form panel');isFormCollapsed=true;}
+        function expandFP(){if(!formPanelEl||!formToggleBtn)return;formPanelEl.classList.remove('collapsed');formToggleBtn.textContent='▲';formToggleBtn.setAttribute('aria-label','Collapse form panel');isFormCollapsed=false;}
+
+        function init(){setupIF();setupMobileFeatures();if(!initFirebase()){updateConnStatus();return;}monitorConnection();fetchCourses().then(function(){console.log('Ready');}).catch(function(e){console.error(e);});if(document.readyState==='complete')setTimeout(fitPreview,100);else window.addEventListener('load',function(){setTimeout(fitPreview,100);});setTimeout(fitPreview,500);setTimeout(fitPreview,1500);window.addEventListener('resize',function(){dfit(150);});if(window.ResizeObserver&&container){try{var ro=new ResizeObserver(function(){dfit(150);});ro.observe(container);}catch(e){}}if(indexPage&&window.MutationObserver){var mo=new MutationObserver(function(){dfit(200);});mo.observe(indexPage,{childList:true,subtree:true,characterData:true});}if(editBtn)editBtn.addEventListener('click',togEdit);if(printBtn)printBtn.addEventListener('click',handlePrint);if(genBtn)genBtn.addEventListener('click',handleGen);if(courseSelect)courseSelect.addEventListener('change',onCC);if(pdfBtn)pdfBtn.addEventListener('click',handlePDF);updateConnStatus();}
+        if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',init);else init();
+    })();
+    </script>
+</body>
+</html>

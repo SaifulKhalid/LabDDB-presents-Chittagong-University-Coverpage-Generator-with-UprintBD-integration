@@ -1,0 +1,25 @@
+.env
+node_modules/
+*.log
+
+# Worker secrets for `wrangler dev` — same values as .env (UprintBD password,
+# service-account JSON). SETUP.md tells you to create this; never commit it.
+.dev.vars
+.dev.vars.*
+
+# Wrangler's local state, including the Cloudflare account id it caches.
+.wrangler/
+
+# Service-account private keys. Google names the download
+# <project>-firebase-adminsdk-<hash>-<hash>.json. These belong in
+# `wrangler secret put`, never in the repo — they bypass every RTDB rule.
+*firebase-adminsdk*.json
+serviceAccount*.json
+
+# Probe dumps — raw HTML/JSON scraped from the live UprintBD account.
+# These contain print history, transaction history, outlet and kiosk details.
+scripts/_*.html
+scripts/_*.json
+
+# Local editor/tooling state.
+.claude/settings.local.json
