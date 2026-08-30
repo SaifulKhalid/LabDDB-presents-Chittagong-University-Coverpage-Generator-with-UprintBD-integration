@@ -981,7 +981,7 @@ button {
 
 .form-input {
   width: 100%;
-  min-height: 44px;
+  min-height: var(--touch-target);
   padding: 9px 12px;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
@@ -1147,11 +1147,11 @@ button {
   border-radius: var(--radius-sm);
   background: var(--bg-input);
   overflow: hidden;
-  height: 44px;
+  height: var(--touch-target);
 }
 
 .stepper-btn {
-  width: 44px;
+  width: var(--touch-target);
   height: 100%;
   display: flex;
   align-items: center;
@@ -1193,7 +1193,7 @@ button {
   border-radius: var(--radius-sm);
   padding: 3px;
   gap: 4px;
-  height: 44px;
+  height: var(--touch-target);
 }
 
 .seg-btn {
@@ -2797,6 +2797,14 @@ button {
   background: var(--primary-light);
 }
 
+/* Overflow scroll wrapper for admin tables (mirrors .console-table-wrap) */
+.admin-table-wrap {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: var(--border) transparent;
+}
+
 /* Loading & Empty placeholders */
 .admin-loading-state,
 .admin-empty-state {
@@ -3155,7 +3163,7 @@ button {
   #editCourseForm > div:last-child button,
   #editStudentForm > div:last-child button {
     width: 100% !important;
-    min-height: 44px;
+    min-height: var(--touch-target);
     flex: unset !important;
   }
 
@@ -3180,12 +3188,10 @@ button {
     min-height: 42px;
   }
 
-  /* Sub-Items and Global Assignment Tables Mobile Touch Scroll */
+  /* Sub-Items and Global Assignment Tables — wrapper handles scroll,
+     table keeps native display for correct thead/tbody rendering */
   .sub-items-table {
-    display: block;
-    width: 100%;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
+    min-width: 480px;
   }
 
   .sub-items-table th,
@@ -4713,7 +4719,7 @@ button {
   }
   .console-actions-bar .btn {
     width: 100%;
-    min-height: 44px;
+    min-height: var(--touch-target);
   }
   .admin-lock-card {
     max-width: calc(100vw - 28px);

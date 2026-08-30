@@ -92,7 +92,7 @@ const PAGE_CHECKS = {
   'experiment-cover.html': GENERATOR_CHROME,
   'experiment-main-cover.html': GENERATOR_CHROME,
   'experiment-index.html': GENERATOR_CHROME,
-  'admin.html': ['mobile-nav'],
+  'admin.html': ['mobile-nav', 'admin-table-wrap'],
   'console.html': ['console-tabs', 'console-table-wrap'],
 };
 

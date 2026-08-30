@@ -453,16 +453,18 @@
           <h3 class="admin-card-title" style="font-size: 17px; margin-bottom: 12px;">Course Experiments</h3>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Experiments are automatically ordered and rendered in the Lab Cover and Index pages.</p>
           
-          <table class="sub-items-table">
-            <thead>
-              <tr>
-                <th width="15%">Exp No</th>
-                <th width="70%">Experiment Title</th>
-                <th width="15%" style="text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="courseExperimentsList"></tbody>
-          </table>
+          <div class="admin-table-wrap">
+            <table class="sub-items-table">
+              <thead>
+                <tr>
+                  <th width="15%">Exp No</th>
+                  <th width="70%">Experiment Title</th>
+                  <th width="15%" style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="courseExperimentsList"></tbody>
+            </table>
+          </div>
 
           <form id="addExperimentForm" style="margin-top: 16px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="width: 100px; margin-bottom: 0;">
@@ -482,17 +484,19 @@
           <h3 class="admin-card-title" style="font-size: 17px; margin-bottom: 12px;">Course Assignments</h3>
           <p style="font-size: 13px; color: var(--text-secondary); margin-bottom: 16px;">Assignments available for students to select in the Assignment Cover generator.</p>
           
-          <table class="sub-items-table">
-            <thead>
-              <tr>
-                <th width="15%">No</th>
-                <th width="50%">Assignment Title</th>
-                <th width="20%">Submission Date</th>
-                <th width="15%" style="text-align: right;">Action</th>
-              </tr>
-            </thead>
-            <tbody id="courseAssignmentsList"></tbody>
-          </table>
+          <div class="admin-table-wrap">
+            <table class="sub-items-table">
+              <thead>
+                <tr>
+                  <th width="15%">No</th>
+                  <th width="50%">Assignment Title</th>
+                  <th width="20%">Submission Date</th>
+                  <th width="15%" style="text-align: right;">Action</th>
+                </tr>
+              </thead>
+              <tbody id="courseAssignmentsList"></tbody>
+            </table>
+          </div>
 
           <form id="addCourseAssignmentForm" style="margin-top: 16px; display: flex; gap: 10px; align-items: flex-end; flex-wrap: wrap;">
             <div class="form-group" style="width: 80px; margin-bottom: 0;">
@@ -650,20 +654,22 @@
           </div>
         </div>
 
-        <table class="sub-items-table">
-          <thead>
-            <tr>
-              <th width="15%">Course</th>
-              <th width="10%">No</th>
-              <th width="45%">Assignment Title</th>
-              <th width="20%">Submission Date</th>
-              <th width="10%" style="text-align: right;">Action</th>
-            </tr>
-          </thead>
-          <tbody id="globalAssignmentsTableBody">
-            <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading assignments…</td></tr>
-          </tbody>
-        </table>
+        <div class="admin-table-wrap">
+          <table class="sub-items-table">
+            <thead>
+              <tr>
+                <th width="15%">Course</th>
+                <th width="10%">No</th>
+                <th width="45%">Assignment Title</th>
+                <th width="20%">Submission Date</th>
+                <th width="10%" style="text-align: right;">Action</th>
+              </tr>
+            </thead>
+            <tbody id="globalAssignmentsTableBody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Loading assignments…</td></tr>
+            </tbody>
+          </table>
+        </div>
       </div>
     </section>
 
