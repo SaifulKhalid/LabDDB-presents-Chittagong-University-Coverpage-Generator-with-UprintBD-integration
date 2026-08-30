@@ -633,7 +633,9 @@
   function handlePdf() {
     if (editing) toggleEdit();
     if (!window.jspdf || !window.html2canvas) {
-      alert('PDF generation libraries not loaded.');
+      if (global.Uprint && global.Uprint.showToast) {
+        global.Uprint.showToast('PDF generation libraries not loaded.', '⚠️');
+      }
       return;
     }
     el.pdfBtn.disabled = true;
@@ -654,7 +656,9 @@
       })
       .catch(function (err) {
         console.error(err);
-        alert('PDF generation failed. Please retry.');
+        if (global.Uprint && global.Uprint.showToast) {
+          global.Uprint.showToast('PDF generation failed. Please retry.', '⚠️');
+        }
         el.pdfBtn.disabled = false;
       });
   }

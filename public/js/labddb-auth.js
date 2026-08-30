@@ -436,12 +436,33 @@
     if (overlay) overlay.classList.remove('show');
   }
 
+  function showToast(message, icon) {
+    if (global.Uprint && global.Uprint.showToast) {
+      global.Uprint.showToast(message, icon);
+      return;
+    }
+    var container = document.getElementById('toastContainer');
+    if (!container) return;
+    var t = document.createElement('div');
+    t.className = 'toast';
+    t.innerHTML = (icon ? '<span class="toast-icon">' + icon + '</span> ' : '') + '<span>' + esc(message) + '</span>';
+    container.appendChild(t);
+    setTimeout(function () {
+      t.style.transition = 'opacity 0.2s, transform 0.2s';
+      t.style.opacity = '0';
+      t.style.transform = 'translateY(10px)';
+      setTimeout(function () {
+        if (t.parentNode) t.parentNode.removeChild(t);
+      }, 200);
+    }, 2800);
+  }
+
   /** @returns {Promise<user|null>} null when dismissed without signing in. */
   function openSignInSheet(reason) {
     if (!state.configured) {
-      alert(
-        'Accounts are not configured on this deployment yet.\n\n' +
-          'Add the LabDDB-Pro Firebase config in public/js/labddb-config.js.'
+      showToast(
+        'Accounts are not configured on this deployment yet. Add the LabDDB-Pro Firebase config in public/js/labddb-config.js.',
+        '⚠️'
       );
       return Promise.resolve(null);
     }

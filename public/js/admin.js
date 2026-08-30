@@ -14,9 +14,19 @@
   var currentEditCourseKey = null;
   var currentEditStudentKey = null;
 
+  // ---- DOM Lookup Helper ----------------------------------------------------
+  var domCache = {};
+  function qs(id) {
+    if (!id) return null;
+    if (!domCache[id] || !domCache[id].isConnected) {
+      domCache[id] = document.getElementById(id);
+    }
+    return domCache[id];
+  }
+
   // ---- Toast Notification ---------------------------------------------------
   function showToast(message, icon) {
-    var container = document.getElementById('toastContainer');
+    var container = qs('toastContainer');
     if (!container) return;
     var toast = document.createElement('div');
     toast.className = 'toast';
@@ -49,7 +59,7 @@
     var theme = saved || (prefersDark ? 'dark' : 'light');
     document.documentElement.setAttribute('data-theme', theme);
 
-    var toggleBtn = document.getElementById('themeToggleBtn');
+    var toggleBtn = qs('themeToggleBtn');
     if (toggleBtn) {
       toggleBtn.addEventListener('click', function () {
         var curr = document.documentElement.getAttribute('data-theme') || 'light';
@@ -62,7 +72,7 @@
 
   // ---- Tab Switching --------------------------------------------------------
   function initTabs() {
-    var nav = document.getElementById('adminTabsNav');
+    var nav = qs('adminTabsNav');
     if (!nav) return;
 
     nav.addEventListener('click', function (e) {
@@ -75,7 +85,9 @@
 
   function switchTab(tabId) {
     document.querySelectorAll('.admin-tab-btn').forEach(function (b) {
-      b.classList.toggle('active', b.getAttribute('data-tab') === tabId);
+      var isSelected = b.getAttribute('data-tab') === tabId;
+      b.classList.toggle('active', isSelected);
+      b.setAttribute('aria-selected', isSelected ? 'true' : 'false');
     });
 
     document.querySelectorAll('.admin-tab-pane').forEach(function (p) {
@@ -92,7 +104,7 @@
       assignmentManagement: 'paneAssignmentManagement',
     };
 
-    var pane = document.getElementById(paneMap[tabId]);
+    var pane = qs(paneMap[tabId]);
     if (pane) pane.classList.add('active');
   }
 
@@ -115,8 +127,8 @@
       // Monitor connection
       db.ref('.info/connected').on('value', function (snap) {
         var isConnected = snap.val() === true;
-        var dot = document.getElementById('dbDot');
-        var text = document.getElementById('dbStatusText');
+        var dot = qs('dbDot');
+        var text = qs('dbStatusText');
         if (dot && text) {
           dot.className = isConnected ? 'pulse-dot up' : 'pulse-dot down';
           text.textContent = isConnected ? 'Database Live' : 'Disconnected';
@@ -126,7 +138,7 @@
       // Stats listener
       db.ref('cvr3_meta/stats/coverpageCount').on('value', function (snap) {
         var count = snap.val() || 0;
-        var el = document.getElementById('metricTotalGenerated');
+        var el = qs('metricTotalGenerated');
         if (el) el.textContent = Number(count).toLocaleString();
       });
 
@@ -168,21 +180,21 @@
       }
     });
 
-    var totalEl = document.getElementById('metricTotalCourses');
-    var labEl = document.getElementById('metricTotalLabs');
+    var totalEl = qs('metricTotalCourses');
+    var labEl = qs('metricTotalLabs');
     if (totalEl) totalEl.textContent = keys.length;
     if (labEl) labEl.textContent = labCount;
   }
 
   function updateStudentsMetrics() {
     var keys = Object.keys(studentsData);
-    var el = document.getElementById('metricTotalStudents');
+    var el = qs('metricTotalStudents');
     if (el) el.textContent = keys.length;
   }
 
   // ---- COURSES TAB ----------------------------------------------------------
   function renderCoursesCatalog(filterQuery) {
-    var container = document.getElementById('courseCatalogGrid');
+    var container = qs('courseCatalogGrid');
     if (!container) return;
 
     var keys = Object.keys(coursesData);
@@ -277,9 +289,9 @@
 
   // ---- ADD COURSE -----------------------------------------------------------
   function initAddCourse() {
-    var container = document.getElementById('addFacultyContainer');
-    var addFmBtn = document.getElementById('addMoreFacultyBtn');
-    var form = document.getElementById('addCourseForm');
+    var container = qs('addFacultyContainer');
+    var addFmBtn = qs('addMoreFacultyBtn');
+    var form = qs('addCourseForm');
 
     if (container && addFmBtn) {
       // Default 1 faculty member
@@ -297,11 +309,11 @@
     if (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
-        var code = document.getElementById('addCourseCode').value.trim().toUpperCase().replace(/\s+/g, '');
-        var title = document.getElementById('addCourseTitle').value.trim();
-        var dept = document.getElementById('addCourseDept').value;
-        var type = document.getElementById('addCourseType').value;
-        var sem = document.getElementById('addSemesterText').value.trim();
+        var code = qs('addCourseCode').value.trim().toUpperCase().replace(/\s+/g, '');
+        var title = qs('addCourseTitle').value.trim();
+        var dept = qs('addCourseDept').value;
+        var type = qs('addCourseType').value;
+        var sem = qs('addSemesterText').value.trim();
 
         if (!code || !title) {
           showToast('Please fill in Course Code and Title', '⚠️');
@@ -346,7 +358,7 @@
 
   // ---- EDIT COURSE ----------------------------------------------------------
   function populateCourseSelects() {
-    var select = document.getElementById('selectCourseToEdit');
+    var select = qs('selectCourseToEdit');
     if (!select) return;
 
     var currentVal = select.value;
@@ -368,7 +380,7 @@
 
   function openCourseEditor(code) {
     switchTab('editCourse');
-    var select = document.getElementById('selectCourseToEdit');
+    var select = qs('selectCourseToEdit');
     if (select) {
       select.value = code;
       loadCourseIntoEditForm(code);
@@ -380,18 +392,18 @@
     if (!c) return;
     currentEditCourseKey = code;
 
-    var form = document.getElementById('editCourseForm');
+    var form = qs('editCourseForm');
     if (!form) return;
     form.style.display = 'block';
 
-    document.getElementById('editCourseCode').value = c.courseCode || code;
-    document.getElementById('editCourseTitle').value = c.courseTitle || '';
-    document.getElementById('editCourseDept').value = c.department || 'Electrical and Electronic Engineering';
-    document.getElementById('editCourseType').value = c.courseType || 'lab';
-    document.getElementById('editSemesterText').value = c.semesterText || '';
+    qs('editCourseCode').value = c.courseCode || code;
+    qs('editCourseTitle').value = c.courseTitle || '';
+    qs('editCourseDept').value = c.department || 'Electrical and Electronic Engineering';
+    qs('editCourseType').value = c.courseType || 'lab';
+    qs('editSemesterText').value = c.semesterText || '';
 
     // Faculty members
-    var container = document.getElementById('editFacultyContainer');
+    var container = qs('editFacultyContainer');
     container.innerHTML = '';
     var faculty = Array.isArray(c.facultyMembers) ? c.facultyMembers : (c.teacher ? [c.teacher] : []);
     if (faculty.length) {
@@ -404,8 +416,8 @@
 
     // Sub-sections
     var isLab = (c.courseType || 'lab') === 'lab';
-    var expSection = document.getElementById('subExperimentsSection');
-    var assignSection = document.getElementById('subAssignmentsSection');
+    var expSection = qs('subExperimentsSection');
+    var assignSection = qs('subAssignmentsSection');
 
     if (expSection) {
       expSection.style.display = isLab ? 'block' : 'none';
@@ -418,22 +430,22 @@
   }
 
   function initEditCourse() {
-    var select = document.getElementById('selectCourseToEdit');
+    var select = qs('selectCourseToEdit');
     if (select) {
       select.addEventListener('change', function () {
         if (this.value) {
           loadCourseIntoEditForm(this.value);
         } else {
-          var form = document.getElementById('editCourseForm');
+          var form = qs('editCourseForm');
           if (form) form.style.display = 'none';
-          document.getElementById('subExperimentsSection').style.display = 'none';
-          document.getElementById('subAssignmentsSection').style.display = 'none';
+          qs('subExperimentsSection').style.display = 'none';
+          qs('subAssignmentsSection').style.display = 'none';
         }
       });
     }
 
-    var addFmBtn = document.getElementById('editMoreFacultyBtn');
-    var container = document.getElementById('editFacultyContainer');
+    var addFmBtn = qs('editMoreFacultyBtn');
+    var container = qs('editFacultyContainer');
     if (addFmBtn && container) {
       addFmBtn.addEventListener('click', function () {
         if (container.children.length < 4) {
@@ -444,16 +456,16 @@
       });
     }
 
-    var form = document.getElementById('editCourseForm');
+    var form = qs('editCourseForm');
     if (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentEditCourseKey) return;
 
-        var title = document.getElementById('editCourseTitle').value.trim();
-        var dept = document.getElementById('editCourseDept').value;
-        var type = document.getElementById('editCourseType').value;
-        var sem = document.getElementById('editSemesterText').value.trim();
+        var title = qs('editCourseTitle').value.trim();
+        var dept = qs('editCourseDept').value;
+        var type = qs('editCourseType').value;
+        var sem = qs('editSemesterText').value.trim();
 
         var facultyList = [];
         container.querySelectorAll('.faculty-form-row').forEach(function (r) {
@@ -482,7 +494,7 @@
       });
     }
 
-    var deleteBtn = document.getElementById('deleteCurrentCourseBtn');
+    var deleteBtn = qs('deleteCurrentCourseBtn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', function () {
         if (currentEditCourseKey) {
@@ -492,13 +504,13 @@
     }
 
     // Sub-manager: Add Experiment
-    var addExpForm = document.getElementById('addExperimentForm');
+    var addExpForm = qs('addExperimentForm');
     if (addExpForm) {
       addExpForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentEditCourseKey) return;
-        var num = document.getElementById('newExpNum').value.trim();
-        var title = document.getElementById('newExpTitle').value.trim();
+        var num = qs('newExpNum').value.trim();
+        var title = qs('newExpTitle').value.trim();
         if (!num || !title) return;
 
         var curExps = coursesData[currentEditCourseKey].experiments || [];
@@ -512,14 +524,14 @@
     }
 
     // Sub-manager: Add Assignment
-    var addAssignForm = document.getElementById('addCourseAssignmentForm');
+    var addAssignForm = qs('addCourseAssignmentForm');
     if (addAssignForm) {
       addAssignForm.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentEditCourseKey) return;
-        var num = document.getElementById('newAssignNum').value.trim();
-        var title = document.getElementById('newAssignTitle').value.trim();
-        var date = document.getElementById('newAssignDate').value;
+        var num = qs('newAssignNum').value.trim();
+        var title = qs('newAssignTitle').value.trim();
+        var date = qs('newAssignDate').value;
         if (!num || !title) return;
 
         var assignId = 'assign_' + Date.now();
@@ -538,7 +550,7 @@
   }
 
   function renderCourseExperimentsList(code, exps) {
-    var tbody = document.getElementById('courseExperimentsList');
+    var tbody = qs('courseExperimentsList');
     if (!tbody) return;
 
     if (!exps.length) {
@@ -572,7 +584,7 @@
   }
 
   function renderCourseAssignmentsList(code, assignmentsObj) {
-    var tbody = document.getElementById('courseAssignmentsList');
+    var tbody = qs('courseAssignmentsList');
     if (!tbody) return;
 
     var keys = Object.keys(assignmentsObj || {});
@@ -610,7 +622,7 @@
         showToast('Course ' + code + ' deleted!', '✓');
         if (currentEditCourseKey === code) {
           currentEditCourseKey = null;
-          var form = document.getElementById('editCourseForm');
+          var form = qs('editCourseForm');
           if (form) form.style.display = 'none';
         }
       }).catch(function (err) {
@@ -621,7 +633,7 @@
 
   // ---- STUDENTS TAB ---------------------------------------------------------
   function renderStudentsCatalog(filterQuery) {
-    var container = document.getElementById('studentCatalogGrid');
+    var container = qs('studentCatalogGrid');
     if (!container) return;
 
     var keys = Object.keys(studentsData);
@@ -691,15 +703,15 @@
   }
 
   function initAddStudent() {
-    var form = document.getElementById('addStudentForm');
+    var form = qs('addStudentForm');
     if (!form) return;
 
     form.addEventListener('submit', function (e) {
       e.preventDefault();
-      var roll = document.getElementById('addStudentRoll').value.trim();
-      var name = document.getElementById('addStudentName').value.trim();
-      var dept = document.getElementById('addStudentDept').value;
-      var session = document.getElementById('addStudentSession').value.trim();
+      var roll = qs('addStudentRoll').value.trim();
+      var name = qs('addStudentName').value.trim();
+      var dept = qs('addStudentDept').value;
+      var session = qs('addStudentSession').value.trim();
 
       if (!roll || !name) {
         showToast('Please fill in Student Roll and Name', '⚠️');
@@ -740,7 +752,7 @@
   }
 
   function populateStudentSelects() {
-    var select = document.getElementById('selectStudentToEdit');
+    var select = qs('selectStudentToEdit');
     if (!select) return;
 
     var currentVal = select.value;
@@ -762,7 +774,7 @@
 
   function openStudentEditor(roll) {
     switchTab('editStudent');
-    var select = document.getElementById('selectStudentToEdit');
+    var select = qs('selectStudentToEdit');
     if (select) {
       select.value = roll;
       loadStudentIntoEditForm(roll);
@@ -774,38 +786,38 @@
     if (!s) return;
     currentEditStudentKey = roll;
 
-    var form = document.getElementById('editStudentForm');
+    var form = qs('editStudentForm');
     if (!form) return;
     form.style.display = 'block';
 
-    document.getElementById('editStudentRoll').value = s.studentId || roll;
-    document.getElementById('editStudentName').value = s.fullName || s.name || '';
-    document.getElementById('editStudentDept').value = s.department || 'Electrical and Electronic Engineering';
-    document.getElementById('editStudentSession').value = s.session || '';
+    qs('editStudentRoll').value = s.studentId || roll;
+    qs('editStudentName').value = s.fullName || s.name || '';
+    qs('editStudentDept').value = s.department || 'Electrical and Electronic Engineering';
+    qs('editStudentSession').value = s.session || '';
   }
 
   function initEditStudent() {
-    var select = document.getElementById('selectStudentToEdit');
+    var select = qs('selectStudentToEdit');
     if (select) {
       select.addEventListener('change', function () {
         if (this.value) {
           loadStudentIntoEditForm(this.value);
         } else {
-          var form = document.getElementById('editStudentForm');
+          var form = qs('editStudentForm');
           if (form) form.style.display = 'none';
         }
       });
     }
 
-    var form = document.getElementById('editStudentForm');
+    var form = qs('editStudentForm');
     if (form) {
       form.addEventListener('submit', function (e) {
         e.preventDefault();
         if (!currentEditStudentKey) return;
 
-        var name = document.getElementById('editStudentName').value.trim();
-        var dept = document.getElementById('editStudentDept').value;
-        var session = document.getElementById('editStudentSession').value.trim();
+        var name = qs('editStudentName').value.trim();
+        var dept = qs('editStudentDept').value;
+        var session = qs('editStudentSession').value.trim();
 
         var updates = {
           fullName: name,
@@ -822,7 +834,7 @@
       });
     }
 
-    var deleteBtn = document.getElementById('deleteStudentBtn');
+    var deleteBtn = qs('deleteStudentBtn');
     if (deleteBtn) {
       deleteBtn.addEventListener('click', function () {
         if (currentEditStudentKey) {
@@ -838,7 +850,7 @@
         showToast('Student ' + roll + ' deleted', '✓');
         if (currentEditStudentKey === roll) {
           currentEditStudentKey = null;
-          var form = document.getElementById('editStudentForm');
+          var form = qs('editStudentForm');
           if (form) form.style.display = 'none';
         }
       });
@@ -847,7 +859,7 @@
 
   // ---- GLOBAL ASSIGNMENTS MASTER VIEW ---------------------------------------
   function renderGlobalAssignments(filterQuery) {
-    var tbody = document.getElementById('globalAssignmentsTableBody');
+    var tbody = qs('globalAssignmentsTableBody');
     if (!tbody) return;
 
     var rows = [];
@@ -909,9 +921,9 @@
 
   // ---- BACKUP & RESTORE -----------------------------------------------------
   function initBackupRestore() {
-    var backupBtn = document.getElementById('backupDataBtn');
-    var restoreBtn = document.getElementById('restoreDataBtn');
-    var fileInput = document.getElementById('jsonFileInput');
+    var backupBtn = qs('backupDataBtn');
+    var restoreBtn = qs('restoreDataBtn');
+    var fileInput = qs('jsonFileInput');
 
     if (backupBtn) {
       backupBtn.addEventListener('click', function () {
@@ -964,21 +976,21 @@
 
   // ---- SEARCH BINDINGS ------------------------------------------------------
   function initSearch() {
-    var courseInput = document.getElementById('courseSearchInput');
+    var courseInput = qs('courseSearchInput');
     if (courseInput) {
       courseInput.addEventListener('input', function () {
         renderCoursesCatalog(this.value);
       });
     }
 
-    var studentInput = document.getElementById('studentSearchInput');
+    var studentInput = qs('studentSearchInput');
     if (studentInput) {
       studentInput.addEventListener('input', function () {
         renderStudentsCatalog(this.value);
       });
     }
 
-    var globalAssignInput = document.getElementById('globalAssignmentSearchInput');
+    var globalAssignInput = qs('globalAssignmentSearchInput');
     if (globalAssignInput) {
       globalAssignInput.addEventListener('input', function () {
         renderGlobalAssignments(this.value);
@@ -1005,7 +1017,7 @@
      an unlocked-looking panel whose every save fails is worse than a clear lock.
   */
   function lockScreen(title, message, actionLabel, onAction) {
-    var host = document.getElementById('adminLock');
+    var host = qs('adminLock');
     if (!host) return;
     host.hidden = false;
     host.innerHTML =
@@ -1017,12 +1029,12 @@
         ? '<button type="button" class="btn btn-primary" id="adminLockBtn">' + esc(actionLabel) + '</button>'
         : '') +
       '</div>';
-    var btn = document.getElementById('adminLockBtn');
+    var btn = qs('adminLockBtn');
     if (btn && onAction) btn.onclick = onAction;
   }
 
   function unlockScreen() {
-    var host = document.getElementById('adminLock');
+    var host = qs('adminLock');
     if (host) {
       host.hidden = true;
       host.innerHTML = '';
