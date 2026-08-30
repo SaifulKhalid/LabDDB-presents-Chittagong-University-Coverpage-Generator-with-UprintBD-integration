@@ -118,11 +118,12 @@
         photoURL: user.photoURL || '',
       };
       attachWallet(user.uid);
-      finishReady();
       emit();
 
       // /api/me creates the user + wallet rows on first sight and returns roles.
-      refreshProfile();
+      refreshProfile().then(function () {
+        finishReady();
+      });
     });
 
     // Completing a redirect sign-in (mobile browsers that block popups).
@@ -226,20 +227,24 @@
     });
   }
 
+  var profilePromise = null;
   function refreshProfile() {
-    return authedFetch('/api/me')
+    profilePromise = authedFetch('/api/me')
       .then(function (data) {
         state.roles = data.roles || state.roles;
         if (!state.walletLoaded && data.wallet) state.wallet = data.wallet;
         if (data.pricing) CFG.pricing = data.pricing;
         if (data.user && data.user.disabled) state.disabled = true;
+        profilePromise = null;
         emit();
         return data;
       })
       .catch(function (err) {
         console.warn('[labddb-auth] /api/me failed:', err.message);
+        profilePromise = null;
         return null;
       });
+    return profilePromise;
   }
 
   // ---------------------------------------------------------------------------
@@ -298,7 +303,14 @@
   }
 
   function whenReady() {
-    if (state.ready) return Promise.resolve(state);
+    if (state.ready) {
+      if (profilePromise) {
+        return profilePromise.then(function () {
+          return state;
+        });
+      }
+      return Promise.resolve(state);
+    }
     return new Promise(function (resolve) {
       readyResolvers.push(resolve);
     });
@@ -548,18 +560,78 @@
     });
   }
 
+  // ---------------------------------------------------------------------------
+  // Remembered Roll Helper
+  // ---------------------------------------------------------------------------
+  function getRememberedRoll() {
+    try {
+      if (state.user && state.user.uid) {
+        var userRoll = localStorage.getItem('labddb_user_roll_' + state.user.uid);
+        if (userRoll) return userRoll;
+      }
+      return localStorage.getItem('labddb_remembered_roll') || '';
+    } catch (_) {
+      return '';
+    }
+  }
+
+  function setRememberedRoll(roll) {
+    var r = (roll || '').trim();
+    try {
+      if (r) {
+        localStorage.setItem('labddb_remembered_roll', r);
+        if (state.user && state.user.uid) {
+          localStorage.setItem('labddb_user_roll_' + state.user.uid, r);
+        }
+      } else {
+        clearRememberedRoll();
+        return;
+      }
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: r } }));
+      }
+    } catch (_) {}
+  }
+
+  function clearRememberedRoll() {
+    try {
+      localStorage.removeItem('labddb_remembered_roll');
+      if (state.user && state.user.uid) {
+        localStorage.removeItem('labddb_user_roll_' + state.user.uid);
+      }
+      if (typeof window !== 'undefined' && window.dispatchEvent) {
+        window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: '' } }));
+      }
+    } catch (_) {}
+  }
+
+  function deriveStudentSession(id) {
+    if (!id || id.length < 2) return '';
+    var m = {
+      '24': '2023-2024',
+      '23': '2022-2023',
+      '22': '2021-2022',
+      '21': '2020-2021',
+      '20': '2019-2020',
+      '19': '2018-2019',
+      '18': '2017-2018',
+    };
+    return m[id.substring(0, 2)] || '';
+  }
+
   function openWalletSheet() {
     if (!state.user) return openSignInSheet();
 
     var overlay = buildSheet('walletSheet');
     var card = overlay.querySelector('.modal-card');
     var body = overlay.querySelector('[data-role="body"]');
-    card.querySelector('[data-role="tag"]').textContent = 'DDB wallet';
-    card.querySelector('[data-role="title"]').textContent = 'Your balance';
+    card.querySelector('[data-role="tag"]').textContent = 'LabDDB profile';
+    card.querySelector('[data-role="title"]').textContent = 'Profile & Wallet';
 
     function render(jobs, ledgerNote) {
       var w = state.wallet;
       var monoPages = CFG.pricing.mono ? Math.floor(w.available / CFG.pricing.mono) : 0;
+      var savedRoll = getRememberedRoll();
 
       var open = (jobs || []).filter(function (j) {
         return j.status === 'reserved' || j.status === 'reserving';
@@ -583,6 +655,25 @@
         '<div class="wallet-facts">' +
         '<div class="wallet-fact"><span>Top-ups received</span><strong>' + taka(w.balance) + '</strong></div>' +
         '<div class="wallet-fact"><span>Enough for</span><strong>' + monoPages + ' b/w page' + (monoPages === 1 ? '' : 's') + '</strong></div>' +
+        '</div>' +
+
+        '<!-- Student Profile & Default Roll Section -->' +
+        '<div class="wallet-section wallet-section--profile">' +
+        '<h4>Student Profile &amp; Default Roll</h4>' +
+        '<p class="wallet-hint">Set your Roll Number to automatically load and generate your cover pages with your verified student details. You can still edit the roll at any time to generate covers for others.</p>' +
+        '<div class="saved-roll-form" style="margin-top: 10px; display: flex; gap: 8px; align-items: center;">' +
+        '<input type="text" id="profileSavedRoll" class="form-input" placeholder="e.g. 20702008" inputmode="numeric" autocomplete="off" value="' + esc(savedRoll) + '" style="flex:1;" />' +
+        '<button type="button" class="btn-small-action" id="profileSaveRollBtn">Save</button>' +
+        '<button type="button" class="btn-small-action danger" id="profileClearRollBtn"' + (savedRoll ? '' : ' style="display:none;"') + '>Clear</button>' +
+        '</div>' +
+        '<div id="profileRollPreview" class="student-card-pill" style="display: none; margin-top: 10px;">' +
+        '<div class="student-avatar" id="profileRollAvatar">S</div>' +
+        '<div class="student-meta">' +
+        '<div class="student-name-val" id="profileRollName">—</div>' +
+        '<div class="student-sub-val" id="profileRollSub">ID: — · Session: —</div>' +
+        '</div>' +
+        '<div class="student-status-icon">✓</div>' +
+        '</div>' +
         '</div>' +
 
         (open.length
@@ -629,6 +720,83 @@
         '<button type="button" class="btn-small-action danger" id="walletSignOut">Sign out</button>' +
         '</div>' +
         '<p class="wallet-identity">' + esc(state.user.email) + '</p>';
+
+      // Bind Saved Roll Input & Preview
+      var rollInput = document.getElementById('profileSavedRoll');
+      var saveBtn = document.getElementById('profileSaveRollBtn');
+      var clearBtn = document.getElementById('profileClearRollBtn');
+      var previewCard = document.getElementById('profileRollPreview');
+      var previewAvatar = document.getElementById('profileRollAvatar');
+      var previewName = document.getElementById('profileRollName');
+      var previewSub = document.getElementById('profileRollSub');
+
+      function updateRollPreview(roll) {
+        if (!roll || roll.length < 3) {
+          if (previewCard) previewCard.style.display = 'none';
+          return;
+        }
+        if (typeof firebase !== 'undefined' && firebase.database) {
+          try {
+            firebase.database().ref('students/' + roll).once('value').then(function (snap) {
+              var st = snap.val();
+              if (previewCard && previewAvatar && previewName && previewSub) {
+                previewCard.style.display = 'flex';
+                if (st) {
+                  previewAvatar.textContent = (st.fullName || roll).charAt(0).toUpperCase();
+                  previewName.textContent = st.fullName || 'Student';
+                  previewSub.textContent = 'ID: ' + roll + ' · Session: ' + (st.session || deriveStudentSession(roll) || '—') + (st.department ? ' · ' + st.department : '');
+                } else {
+                  previewAvatar.textContent = 'S';
+                  previewName.textContent = 'Custom Student (' + roll + ')';
+                  previewSub.textContent = 'ID: ' + roll + ' · Session: ' + deriveStudentSession(roll);
+                }
+              }
+            }).catch(function () {
+              if (previewCard) previewCard.style.display = 'none';
+            });
+          } catch (_) {}
+        }
+      }
+
+      if (savedRoll) updateRollPreview(savedRoll);
+
+      var rollDebounce;
+      if (rollInput) {
+        rollInput.oninput = function () {
+          var val = this.value.trim();
+          clearTimeout(rollDebounce);
+          rollDebounce = setTimeout(function () {
+            updateRollPreview(val);
+          }, 300);
+        };
+      }
+
+      if (saveBtn) {
+        saveBtn.onclick = function () {
+          var val = rollInput ? rollInput.value.trim() : '';
+          if (!val) {
+            clearRememberedRoll();
+            if (clearBtn) clearBtn.style.display = 'none';
+            if (previewCard) previewCard.style.display = 'none';
+            showToast('Remembered roll cleared.', 'ℹ️');
+            return;
+          }
+          setRememberedRoll(val);
+          if (clearBtn) clearBtn.style.display = 'inline-block';
+          updateRollPreview(val);
+          showToast('Default Roll ' + val + ' remembered!', '✓');
+        };
+      }
+
+      if (clearBtn) {
+        clearBtn.onclick = function () {
+          clearRememberedRoll();
+          if (rollInput) rollInput.value = '';
+          if (previewCard) previewCard.style.display = 'none';
+          clearBtn.style.display = 'none';
+          showToast('Remembered roll cleared.', 'ℹ️');
+        };
+      }
 
       body.querySelectorAll('[data-cancel]').forEach(function (btn) {
         btn.onclick = function () {
@@ -715,6 +883,9 @@
     requireUser: requireUser,
     openSignIn: openSignInSheet,
     openWallet: openWalletSheet,
+    getRememberedRoll: getRememberedRoll,
+    setRememberedRoll: setRememberedRoll,
+    clearRememberedRoll: clearRememberedRoll,
     get user() {
       return state.user;
     },

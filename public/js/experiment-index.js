@@ -119,9 +119,41 @@
         console.error('[Firebase] Realtime cvr3_courses listener error:', err);
       });
 
+      // Realtime stats counter listener
+      bindLiveCounter();
+
     } catch (e) {
       console.error('[Firebase] Initialization error:', e);
     }
+  }
+
+  function bindLiveCounter() {
+    if (!db) return;
+    var elBadge = document.getElementById('coverpageLiveCount');
+    if (!elBadge) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').on('value', function (snap) {
+        var count = Number(snap.val()) || 0;
+        if (count > 0) {
+          elBadge.textContent = '⚡ ' + count.toLocaleString() + ' covers generated';
+        } else {
+          elBadge.textContent = '⚡ Live CU Synced';
+        }
+      }, function () {
+        elBadge.textContent = '⚡ Live CU Synced';
+      });
+    } catch (_) {
+      elBadge.textContent = '⚡ Live CU Synced';
+    }
+  }
+
+  function incCoverCounter() {
+    if (!db) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').transaction(function (c) {
+        return (Number(c) || 0) + 1;
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   function ingestRealtimeCourses(val) {
@@ -388,6 +420,7 @@
       link.href = URL.createObjectURL(blob);
       link.download = filename;
       link.click();
+      incCoverCounter();
 
       if (el.pdfBtn) {
         el.pdfBtn.disabled = false;
@@ -408,6 +441,7 @@
 
   function handlePrint() {
     if (editing) toggleInlineEdit();
+    incCoverCounter();
     window.print();
   }
 
@@ -433,8 +467,9 @@
         if (!currentCourse) return 'Pick a course first.';
         return null;
       },
-    }).then(function () {
+    }).then(function (res) {
       if (el.otpBtn) el.otpBtn.disabled = false;
+      if (res && res.otp) incCoverCounter();
     });
   }
 

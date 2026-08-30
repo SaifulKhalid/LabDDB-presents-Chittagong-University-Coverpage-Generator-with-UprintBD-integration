@@ -12,7 +12,7 @@
   // ---- Cached DOM Element Map -----------------------------------------------
   var el = {};
   var elementIds = [
-    'appLayout', 'courseSelect', 'assignmentSelect', 'rollNumber',
+    'appLayout', 'courseSelect', 'assignmentSelect', 'rollNumber', 'rememberRollCheckbox',
     'studentName', 'submissionDate', 'copies', 'colorMode', 'generateBtn', 'editBtn',
     'toolEditBtn', 'printBtn', 'pdfBtn', 'otpBtn', 'lookupBadge', 'studentCardPill',
     'studentAvatar', 'studentNameVal', 'studentSubVal', 'coverPage', 'previewScale',
@@ -134,9 +134,41 @@
         console.error('[Firebase] Realtime cvr3_courses listener error:', err);
       });
 
+      // Realtime stats counter listener
+      bindLiveCounter();
+
     } catch (e) {
       console.error('[Firebase] Initialization error:', e);
     }
+  }
+
+  function bindLiveCounter() {
+    if (!db) return;
+    var elBadge = document.getElementById('coverpageLiveCount');
+    if (!elBadge) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').on('value', function (snap) {
+        var count = Number(snap.val()) || 0;
+        if (count > 0) {
+          elBadge.textContent = '⚡ ' + count.toLocaleString() + ' covers generated';
+        } else {
+          elBadge.textContent = '⚡ Live CU Synced';
+        }
+      }, function () {
+        elBadge.textContent = '⚡ Live CU Synced';
+      });
+    } catch (_) {
+      elBadge.textContent = '⚡ Live CU Synced';
+    }
+  }
+
+  function incCoverCounter() {
+    if (!db) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').transaction(function (c) {
+        return (Number(c) || 0) + 1;
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   function ingestRealtimeCourses(val) {
@@ -357,6 +389,15 @@
     return months[m] + ' ' + +p[2] + ', ' + p[0];
   }
 
+  function formatDeptLabel(d) {
+    if (!d) return 'Dept. of Electrical and Electronic Engineering';
+    var trimmed = String(d).trim();
+    if (/^(dept\.|department|institute|center|bureau|faculty)/i.test(trimmed)) {
+      return trimmed;
+    }
+    return 'Dept. of ' + trimmed;
+  }
+
   function renderFaculty(members, dept) {
     if (!el.coverPage) return;
     var fc = el.coverPage.querySelector('[data-field="faculty"]');
@@ -364,8 +405,8 @@
     var deptName = dept || 'Electrical and Electronic Engineering';
     if (!members || !members.length) {
       fc.innerHTML =
-        '<div class="faculty-block"><strong>—</strong><br/>Faculty Member<br/>Dept. of ' +
-        esc(deptName) +
+        '<div class="faculty-block"><strong>—</strong><br/>Faculty Member<br/>' +
+        esc(formatDeptLabel(deptName)) +
         '<br/>University of Chittagong</div>';
       return;
     }
@@ -375,7 +416,7 @@
           '<div class="faculty-block">' +
           '<strong>' + esc(f.name || '—') + '</strong><br/>' +
           esc(f.designation || f.title || 'Faculty Member') + '<br/>' +
-          'Dept. of ' + esc(f.department || deptName) + '<br/>' +
+          esc(formatDeptLabel(f.department || deptName)) + '<br/>' +
           'University of Chittagong' +
           '</div>'
         );
@@ -422,7 +463,7 @@
         'ID: <strong>' + esc(s.studentId || '') + '</strong><br/>' +
         (sess ? 'Session: ' + esc(sess) + '<br/>' : '') +
         (sem ? esc(sem) + '<br/>' : '') +
-        'Dept. of ' + esc(dept) + '<br/>' +
+        esc(formatDeptLabel(dept)) + '<br/>' +
         'University of Chittagong'
       );
     } else {
@@ -650,6 +691,7 @@
         link.download = pdfFilename();
         link.click();
         el.pdfBtn.disabled = false;
+        incCoverCounter();
         if (global.Uprint && global.Uprint.showToast) {
           global.Uprint.showToast('PDF downloaded successfully!', '📄');
         }
@@ -666,6 +708,7 @@
   // ---- Direct Browser Print Handler ----------------------------------------
   function handleDirectPrint() {
     if (editing) toggleEdit();
+    incCoverCounter();
     window.print();
   }
 
@@ -692,8 +735,9 @@
         if (el.rollNumber && !el.rollNumber.value.trim()) return 'Enter your roll number first.';
         return null;
       },
-    }).then(function () {
+    }).then(function (res) {
       if (el.otpBtn) el.otpBtn.disabled = false;
+      if (res && res.otp) incCoverCounter();
     });
   }
 
@@ -754,6 +798,13 @@
                 setLookupStatus('Custom student entry', 'warn');
                 showStudentCard(current.student);
               }
+              if (el.rememberRollCheckbox && el.rememberRollCheckbox.checked) {
+                if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
+                  global.LabDDB.auth.setRememberedRoll(roll);
+                } else {
+                  localStorage.setItem('labddb_remembered_roll', roll);
+                }
+              }
               updatePreview();
             });
           }, 300);
@@ -762,6 +813,34 @@
           if (el.studentCardPill) el.studentCardPill.style.display = 'none';
           current.student = null;
           updatePreview();
+        }
+      });
+    }
+
+    // Remember Roll Checkbox Toggle
+    if (el.rememberRollCheckbox) {
+      el.rememberRollCheckbox.addEventListener('change', function () {
+        var roll = el.rollNumber ? el.rollNumber.value.trim() : '';
+        if (this.checked) {
+          if (roll && roll.length >= 3) {
+            if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
+              global.LabDDB.auth.setRememberedRoll(roll);
+            } else {
+              localStorage.setItem('labddb_remembered_roll', roll);
+            }
+            if (global.Uprint && global.Uprint.showToast) {
+              global.Uprint.showToast('Roll ' + roll + ' will be remembered.', '✓');
+            }
+          }
+        } else {
+          if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.clearRememberedRoll) {
+            global.LabDDB.auth.clearRememberedRoll();
+          } else {
+            localStorage.removeItem('labddb_remembered_roll');
+          }
+          if (global.Uprint && global.Uprint.showToast) {
+            global.Uprint.showToast('Remembered roll cleared.', 'ℹ️');
+          }
         }
       });
     }
@@ -887,6 +966,56 @@
     window.addEventListener('orientationchange', function () {
       setTimeout(fitPreview, 150);
     });
+
+    // Listen for roll changes from profile modal or external tabs
+    window.addEventListener('labddb:roll_changed', function (e) {
+      var newRoll = e && e.detail ? e.detail.roll : '';
+      loadRememberedRoll(newRoll);
+    });
+  }
+
+  // ---- Remembered Roll Auto-Loader ------------------------------------------
+  function loadRememberedRoll(forcedRoll) {
+    var remembered = typeof forcedRoll === 'string'
+      ? forcedRoll
+      : (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.getRememberedRoll
+          ? global.LabDDB.auth.getRememberedRoll()
+          : (localStorage.getItem('labddb_remembered_roll') || ''));
+
+    if (el.rememberRollCheckbox) {
+      el.rememberRollCheckbox.checked = Boolean(remembered);
+    }
+
+    if (remembered && el.rollNumber) {
+      el.rollNumber.value = remembered;
+      setLookupStatus('Searching Firebase…', '');
+      lookupStudent(remembered).then(function (st) {
+        if (st) {
+          current.student = st;
+          if (st.fullName && el.studentName) el.studentName.value = st.fullName;
+          setLookupStatus('✓ Verified student record', 'ok');
+          showStudentCard(st);
+        } else {
+          current.student = {
+            fullName: (el.studentName && el.studentName.value.trim()) || remembered,
+            studentId: remembered,
+            session: deriveSession(remembered),
+            department: current.course ? current.course.department : 'Electrical and Electronic Engineering',
+          };
+          setLookupStatus('Custom student entry', 'warn');
+          showStudentCard(current.student);
+        }
+        updatePreview();
+        fitPreview();
+      });
+    } else if (!remembered && typeof forcedRoll === 'string') {
+      if (el.rollNumber && el.rollNumber.value === '') {
+        current.student = null;
+        if (el.studentCardPill) el.studentCardPill.style.display = 'none';
+        setLookupStatus('Enter roll to auto-fill', '');
+        updatePreview();
+      }
+    }
   }
 
   // ---- Bootstrap Application ------------------------------------------------
@@ -896,6 +1025,7 @@
     bindEvents();
     updateCostCalculator();
     initFirebaseRealtime();
+    loadRememberedRoll();
     checkBridge();
     setInterval(checkBridge, 30000);
     setTimeout(fitPreview, 100);

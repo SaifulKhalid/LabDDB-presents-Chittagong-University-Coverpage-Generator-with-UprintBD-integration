@@ -135,11 +135,19 @@
         }
       });
 
-      // Stats listener
+      // Realtime metadata / stats listener
       db.ref('cvr3_meta/stats/coverpageCount').on('value', function (snap) {
-        var count = snap.val() || 0;
+        var count = Number(snap.val()) || 0;
         var el = qs('metricTotalGenerated');
-        if (el) el.textContent = Number(count).toLocaleString();
+        if (el) el.textContent = count.toLocaleString();
+        var elBadge = document.getElementById('coverpageLiveCount');
+        if (elBadge) {
+          if (count > 0) {
+            elBadge.textContent = '⚡ ' + count.toLocaleString() + ' covers generated';
+          } else {
+            elBadge.textContent = '⚡ Live CU Synced';
+          }
+        }
       });
 
       // Courses listener
@@ -270,21 +278,266 @@
     });
   }
 
+  // Official Chittagong University Faculties & 48 Departments
+  var CU_FACULTIES = [
+    {
+      faculty: 'Faculty of Engineering',
+      departments: [
+        'Electrical and Electronic Engineering',
+        'Computer Science & Engineering',
+      ],
+    },
+    {
+      faculty: 'Faculty of Science',
+      departments: [
+        'Physics',
+        'Chemistry',
+        'Mathematics',
+        'Statistics',
+        'Applied Chemistry and Chemical Engineering',
+        'Forestry and Environmental Sciences',
+        'Jamal Nazrul Islam Center for Advanced Research (JNICAR)',
+      ],
+    },
+    {
+      faculty: 'Faculty of Arts and Humanities',
+      departments: [
+        'Bangla',
+        'English',
+        'History',
+        'Philosophy',
+        'Islamic History and Culture',
+        'Arabic',
+        'Islamic Studies',
+        'Dramatics',
+        'Institute of Modern Languages',
+        'Institute of Fine Arts',
+        'Persian Language & Literature',
+        'Pali',
+        'Sanskrit',
+        'Music',
+        'Bangladesh Studies',
+      ],
+    },
+    {
+      faculty: 'Faculty of Business Administration',
+      departments: [
+        'Accounting',
+        'Management',
+        'Finance',
+        'Marketing',
+        'Human Resource Management',
+        'Banking and Insurance',
+        'Chittagong University Center for Business Administration',
+        'Bureau of Business Research',
+      ],
+    },
+    {
+      faculty: 'Faculty of Social Sciences',
+      departments: [
+        'Economics',
+        'Political Science',
+        'Sociology',
+        'Public Administration',
+        'Anthropology',
+        'International Relations',
+        'Communication and Journalism',
+        'Criminology and Police Science',
+        'Development Studies',
+        'Social Science Research Center',
+      ],
+    },
+    {
+      faculty: 'Faculty of Biological Sciences',
+      departments: [
+        'Zoology',
+        'Botany',
+        'Geography and Environmental Studies',
+        'Biochemistry and Molecular Biology',
+        'Microbiology',
+        'Soil Science',
+        'Genetic Engineering and Biotechnology',
+        'Psychology',
+        'Pharmacy',
+      ],
+    },
+    {
+      faculty: 'Faculty of Law',
+      departments: [
+        'Law',
+      ],
+    },
+    {
+      faculty: 'Faculty of Education',
+      departments: [
+        'Physical Education and Sports Science',
+        'Institute of Education and Research',
+      ],
+    },
+    {
+      faculty: 'Faculty of Marine Sciences and Fisheries',
+      departments: [
+        'Marine Sciences',
+        'Oceanography',
+        'Fisheries',
+      ],
+    },
+    {
+      faculty: 'Faculty of Medicine',
+      departments: [
+        'Paediatrics',
+        'Community Ophthalmology',
+      ],
+    },
+  ];
+
+  var CU_DESIGNATIONS = [
+    'Professor',
+    'Associate Professor',
+    'Assistant Professor',
+    'Lecturer',
+    'Professor & Chairman',
+    'Professor & Head',
+    'Associate Professor & Head',
+    'Assistant Professor & Head',
+    'Adjunct Faculty',
+  ];
+
+  function normalizeDepartment(d) {
+    if (!d) return '';
+    var lower = d.toLowerCase().replace(/^dept\.\s*of\s*/i, '').replace(/^department\s*of\s*/i, '').trim();
+    if (lower === 'eee') return 'Electrical and Electronic Engineering';
+    if (lower === 'cse') return 'Computer Science & Engineering';
+    return d.trim();
+  }
+
+  function buildDepartmentOptionsHtml(selectedVal) {
+    var sVal = (selectedVal || '').trim();
+    var norm = normalizeDepartment(sVal);
+    var isMatched = false;
+    var html = '';
+
+    CU_FACULTIES.forEach(function (g) {
+      html += '<optgroup label="' + esc(g.faculty) + '">';
+      g.departments.forEach(function (d) {
+        var isSelected = false;
+        if (!isMatched && (d.toLowerCase() === norm.toLowerCase() || d.toLowerCase() === sVal.toLowerCase())) {
+          isSelected = true;
+          isMatched = true;
+        }
+        html += '<option value="' + esc(d) + '"' + (isSelected ? ' selected' : '') + '>' + esc(d) + '</option>';
+      });
+      html += '</optgroup>';
+    });
+
+    var isOther = Boolean(sVal && !isMatched);
+    html += '<option value="__OTHER__"' + (isOther ? ' selected' : '') + '>Other / Custom Department…</option>';
+    return { html: html, isOther: isOther, customVal: isOther ? sVal : '' };
+  }
+
+  function buildDesignationOptionsHtml(selectedVal) {
+    var sVal = (selectedVal || '').trim();
+    var isMatched = false;
+    var html = '';
+
+    CU_DESIGNATIONS.forEach(function (desig) {
+      var isSelected = false;
+      if (!isMatched && desig.toLowerCase() === sVal.toLowerCase()) {
+        isSelected = true;
+        isMatched = true;
+      }
+      html += '<option value="' + esc(desig) + '"' + (isSelected ? ' selected' : '') + '>' + esc(desig) + '</option>';
+    });
+
+    var isOther = Boolean(sVal && !isMatched);
+    html += '<option value="__OTHER__"' + (isOther ? ' selected' : '') + '>Other / Custom Designation…</option>';
+    return { html: html, isOther: isOther, customVal: isOther ? sVal : '' };
+  }
+
+  function populateAllDepartmentSelects() {
+    ['addCourseDept', 'editCourseDept', 'addStudentDept', 'editStudentDept'].forEach(function (id) {
+      var sel = qs(id);
+      if (!sel) return;
+      var curVal = sel.value;
+      var optInfo = buildDepartmentOptionsHtml(curVal || 'Electrical and Electronic Engineering');
+      sel.innerHTML = optInfo.html;
+    });
+  }
+
   // Dynamic Faculty Row Helper
   function createFacultyRow(fData) {
     var f = fData || {};
     var row = document.createElement('div');
     row.className = 'faculty-form-row';
+
+    var desigVal = f.designation || f.title || 'Professor';
+    var deptVal = f.department || 'Electrical and Electronic Engineering';
+
+    var desigInfo = buildDesignationOptionsHtml(desigVal);
+    var deptInfo = buildDepartmentOptionsHtml(deptVal);
+
     row.innerHTML =
-      '<input type="text" class="form-input fm-name" placeholder="Faculty Name (e.g. Dr. Md. Rahman)" value="' + esc(f.name || '') + '" required />' +
-      '<input type="text" class="form-input fm-desig" placeholder="Designation (e.g. Professor)" value="' + esc(f.designation || f.title || '') + '" required />' +
-      '<input type="text" class="form-input fm-dept" placeholder="Dept (e.g. Dept. of EEE)" value="' + esc(f.department || 'Dept. of EEE') + '" />' +
+      '<div class="fm-field-col">' +
+        '<input type="text" class="form-input fm-name" placeholder="Faculty Name (e.g. Dr. Md. Rahman)" value="' + esc(f.name || '') + '" required />' +
+      '</div>' +
+      '<div class="fm-field-col">' +
+        '<select class="form-input fm-desig-select">' + desigInfo.html + '</select>' +
+        '<input type="text" class="form-input fm-desig-custom" placeholder="Type designation" value="' + esc(desigInfo.customVal) + '" style="margin-top:6px; display:' + (desigInfo.isOther ? 'block' : 'none') + ';" />' +
+      '</div>' +
+      '<div class="fm-field-col">' +
+        '<select class="form-input fm-dept-select">' + deptInfo.html + '</select>' +
+        '<input type="text" class="form-input fm-dept-custom" placeholder="Type dept (e.g. Dept. of ME)" value="' + esc(deptInfo.customVal) + '" style="margin-top:6px; display:' + (deptInfo.isOther ? 'block' : 'none') + ';" />' +
+      '</div>' +
       '<button type="button" class="btn-icon-danger fm-remove-btn" title="Remove faculty member">✕</button>';
+
+    var desigSelect = row.querySelector('.fm-desig-select');
+    var desigCustom = row.querySelector('.fm-desig-custom');
+    var deptSelect = row.querySelector('.fm-dept-select');
+    var deptCustom = row.querySelector('.fm-dept-custom');
+
+    desigSelect.addEventListener('change', function () {
+      if (this.value === '__OTHER__') {
+        desigCustom.style.display = 'block';
+        desigCustom.focus();
+      } else {
+        desigCustom.style.display = 'none';
+      }
+    });
+
+    deptSelect.addEventListener('change', function () {
+      if (this.value === '__OTHER__') {
+        deptCustom.style.display = 'block';
+        deptCustom.focus();
+      } else {
+        deptCustom.style.display = 'none';
+      }
+    });
 
     row.querySelector('.fm-remove-btn').addEventListener('click', function () {
       if (row.parentNode) row.parentNode.removeChild(row);
     });
     return row;
+  }
+
+  function getFacultyFromRow(r) {
+    var name = (r.querySelector('.fm-name') ? r.querySelector('.fm-name').value : '').trim();
+    var desigSelect = r.querySelector('.fm-desig-select');
+    var desigCustom = r.querySelector('.fm-desig-custom');
+    var desig = '';
+    if (desigSelect) {
+      desig = desigSelect.value === '__OTHER__' ? (desigCustom ? desigCustom.value.trim() : '') : desigSelect.value.trim();
+    }
+    if (!desig) desig = 'Faculty Member';
+
+    var deptSelect = r.querySelector('.fm-dept-select');
+    var deptCustom = r.querySelector('.fm-dept-custom');
+    var fDept = '';
+    if (deptSelect) {
+      fDept = deptSelect.value === '__OTHER__' ? (deptCustom ? deptCustom.value.trim() : '') : deptSelect.value.trim();
+    }
+    if (!fDept) fDept = 'Electrical and Electronic Engineering';
+
+    return { name: name, designation: desig, department: fDept };
   }
 
   // ---- ADD COURSE -----------------------------------------------------------
@@ -295,11 +548,12 @@
 
     if (container && addFmBtn) {
       // Default 1 faculty member
-      container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Dept. of EEE' }));
+      container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Electrical and Electronic Engineering' }));
 
       addFmBtn.addEventListener('click', function () {
         if (container.children.length < 4) {
-          container.appendChild(createFacultyRow({ name: '', designation: 'Assistant Professor', department: 'Dept. of EEE' }));
+          var defaultDept = qs('addCourseDept') ? qs('addCourseDept').value : 'Electrical and Electronic Engineering';
+          container.appendChild(createFacultyRow({ name: '', designation: 'Assistant Professor', department: defaultDept }));
         } else {
           showToast('Maximum 4 faculty members allowed', '⚠️');
         }
@@ -323,11 +577,9 @@
         // Collect faculty members
         var facultyList = [];
         container.querySelectorAll('.faculty-form-row').forEach(function (r) {
-          var name = r.querySelector('.fm-name').value.trim();
-          var desig = r.querySelector('.fm-desig').value.trim();
-          var fDept = r.querySelector('.fm-dept').value.trim();
-          if (name) {
-            facultyList.push({ name: name, designation: desig, department: fDept });
+          var fm = getFacultyFromRow(r);
+          if (fm.name) {
+            facultyList.push(fm);
           }
         });
 
@@ -346,7 +598,7 @@
           showToast('Course ' + code + ' added successfully!', '✓');
           form.reset();
           container.innerHTML = '';
-          container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Dept. of EEE' }));
+          container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Electrical and Electronic Engineering' }));
           switchTab('viewCourses');
         }).catch(function (err) {
           console.error(err);
@@ -411,7 +663,8 @@
         container.appendChild(createFacultyRow(f));
       });
     } else {
-      container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Dept. of EEE' }));
+      var courseDept = c.department || 'Electrical and Electronic Engineering';
+      container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: courseDept }));
     }
 
     // Sub-sections
@@ -449,7 +702,8 @@
     if (addFmBtn && container) {
       addFmBtn.addEventListener('click', function () {
         if (container.children.length < 4) {
-          container.appendChild(createFacultyRow({ name: '', designation: 'Assistant Professor', department: 'Dept. of EEE' }));
+          var defaultDept = qs('editCourseDept') ? qs('editCourseDept').value : 'Electrical and Electronic Engineering';
+          container.appendChild(createFacultyRow({ name: '', designation: 'Assistant Professor', department: defaultDept }));
         } else {
           showToast('Maximum 4 faculty members allowed', '⚠️');
         }
@@ -469,11 +723,9 @@
 
         var facultyList = [];
         container.querySelectorAll('.faculty-form-row').forEach(function (r) {
-          var name = r.querySelector('.fm-name').value.trim();
-          var desig = r.querySelector('.fm-desig').value.trim();
-          var fDept = r.querySelector('.fm-dept').value.trim();
-          if (name) {
-            facultyList.push({ name: name, designation: desig, department: fDept });
+          var fm = getFacultyFromRow(r);
+          if (fm.name) {
+            facultyList.push(fm);
           }
         });
 
@@ -1064,6 +1316,7 @@
   function boot() {
     if (booted) return;
     booted = true;
+    populateAllDepartmentSelects();
     initFirebase();
     initAddCourse();
     initEditCourse();

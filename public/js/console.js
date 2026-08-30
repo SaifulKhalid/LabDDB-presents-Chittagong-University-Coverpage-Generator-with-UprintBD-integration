@@ -1199,7 +1199,10 @@
             'This console moves real money. Sign in with the project admin account to continue.',
             'Sign in with Google',
             function () {
-              auth.openSignIn('The console is restricted to the project admin account.');
+              auth.signIn().catch(function (err) {
+                if (err && err.cancelled) return;
+                toast(err.message || 'Sign-in failed.', '⚠️');
+              });
             }
           );
           return;
@@ -1257,11 +1260,14 @@
       });
     }
 
-    // Signing in or out from the sheet re-runs the gate, no reload needed.
+    // Signing in or out or role change re-runs the gate, no reload needed.
+    var lastStateKey = '';
     auth.onChange(function (s) {
       var uid = s.user ? s.user.uid : null;
-      if (uid === lastUid) return; // wallet/price ticks, not an identity change
-      lastUid = uid;
+      var roleKey = (s.roles && s.roles.projectAdmin) ? 'admin' : 'user';
+      var stateKey = (uid || 'anon') + ':' + roleKey;
+      if (stateKey === lastStateKey) return;
+      lastStateKey = stateKey;
       if (!uid) loaded = {};
       gate();
     });

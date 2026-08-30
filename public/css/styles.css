@@ -1979,7 +1979,7 @@ button {
   display: none;
   align-items: center;
   justify-content: center;
-  z-index: 100;
+  z-index: 1000;
   padding: 20px;
   opacity: 0;
   transition: opacity 0.25s ease;
@@ -2226,7 +2226,7 @@ button {
   position: fixed;
   bottom: calc(var(--mobile-nav-height) + 20px + var(--safe-bottom));
   right: 20px;
-  z-index: 120;
+  z-index: 1100;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -2709,11 +2709,29 @@ button {
   display: grid;
   grid-template-columns: 1fr 1fr 1fr auto;
   gap: 10px;
-  align-items: center;
+  align-items: flex-start;
   background: var(--bg-input);
   padding: 10px 14px;
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
+}
+
+.fm-field-col {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  min-width: 0;
+}
+
+.fm-desig-select,
+.fm-dept-select {
+  cursor: pointer;
+}
+
+.fm-desig-custom,
+.fm-dept-custom {
+  margin-top: 6px;
+  background: var(--bg-surface);
 }
 
 .btn-icon-danger {
@@ -2728,6 +2746,9 @@ button {
   border: none;
   cursor: pointer;
   transition: var(--transition-smooth);
+}
+.btn-icon-danger.fm-remove-btn {
+  margin-top: 2px;
 }
 .btn-icon-danger:hover {
   background: var(--danger);
@@ -2984,31 +3005,202 @@ button {
   .admin-top-actions .btn-small-action {
     flex: 1;
     justify-content: center;
-    min-height: 38px;
+    min-height: 40px;
     padding: 8px 12px;
+    font-size: 12.5px;
   }
 
+  /* Admin Metrics 2x2 Grid on Mobile */
+  .admin-metrics-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+    margin-bottom: 18px;
+  }
+
+  .metric-card {
+    padding: 12px 14px;
+    gap: 10px;
+    border-radius: var(--radius-md);
+  }
+
+  .metric-icon-wrap {
+    width: 38px;
+    height: 38px;
+    font-size: 18px;
+    border-radius: var(--radius-sm);
+  }
+
+  .metric-number {
+    font-size: 19px;
+  }
+
+  .metric-label {
+    font-size: 11px;
+    margin-top: 2px;
+    line-height: 1.25;
+  }
+
+  /* Admin Tabs Navigation Mobile */
   .admin-tabs-nav {
     margin-bottom: 16px;
     padding: 4px;
     gap: 4px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    scroll-snap-type: x mandatory;
+  }
+
+  .admin-tabs-nav::-webkit-scrollbar {
+    display: none;
   }
 
   .admin-tab-btn {
+    flex-shrink: 0;
+    scroll-snap-align: start;
     padding: 8px 12px;
     font-size: 12.5px;
+    min-height: 38px;
+    gap: 6px;
+  }
+
+  /* Admin Card Container Mobile */
+  .admin-card-container {
+    padding: 16px 14px;
+    border-radius: var(--radius-md);
   }
 
   .admin-card-header {
     flex-direction: column;
     align-items: stretch;
     gap: 12px;
+    margin-bottom: 16px;
+  }
+
+  .admin-card-title {
+    font-size: 17px;
   }
 
   .admin-search-wrap {
     width: 100%;
     max-width: 100%;
     min-width: 0;
+  }
+
+  .admin-search-input {
+    padding: 9px 12px 9px 36px;
+  }
+
+  /* Catalog Cards Grid on Mobile (Single Column, Full-width Actions) */
+  .cards-catalog-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .catalog-item-card {
+    padding: 14px;
+    gap: 12px;
+  }
+
+  .item-card-title {
+    font-size: 14.5px;
+  }
+
+  .item-card-actions {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    padding-top: 10px;
+  }
+
+  .item-card-actions .btn-small-action {
+    width: 100%;
+    justify-content: center;
+    min-height: 38px;
+    font-size: 12.5px;
+  }
+
+  /* Faculty Form Rows on Mobile: Stack into Clean Cards */
+  .faculty-form-row {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    position: relative;
+    padding: 14px 12px 12px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+  }
+
+  .faculty-form-row .fm-field-col {
+    width: 100%;
+  }
+
+  .faculty-form-row .btn-icon-danger.fm-remove-btn {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+    margin-top: 0;
+  }
+
+  /* Course Edit / Student Edit Action Buttons on Mobile */
+  #editCourseForm > div:last-child,
+  #editStudentForm > div:last-child {
+    flex-direction: column !important;
+    gap: 10px !important;
+  }
+
+  #editCourseForm > div:last-child button,
+  #editStudentForm > div:last-child button {
+    width: 100% !important;
+    min-height: 44px;
+    flex: unset !important;
+  }
+
+  /* Experiment / Assignment Add Inline Forms on Mobile */
+  #addExperimentForm,
+  #addCourseAssignmentForm {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 10px !important;
+  }
+
+  #addExperimentForm .form-group,
+  #addCourseAssignmentForm .form-group {
+    width: 100% !important;
+    min-width: 0 !important;
+  }
+
+  #addExperimentForm button[type="submit"],
+  #addCourseAssignmentForm button[type="submit"] {
+    width: 100%;
+    justify-content: center;
+    min-height: 42px;
+  }
+
+  /* Sub-Items and Global Assignment Tables Mobile Touch Scroll */
+  .sub-items-table {
+    display: block;
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .sub-items-table th,
+  .sub-items-table td {
+    padding: 8px 10px;
+    font-size: 12px;
+    white-space: nowrap;
+  }
+
+  .sub-items-table th:nth-child(2),
+  .sub-items-table td:nth-child(2),
+  .sub-items-table th:nth-child(3),
+  .sub-items-table td:nth-child(3) {
+    white-space: normal;
+    min-width: 140px;
   }
 
   /* Transform Modal into Native Mobile Bottom Sheet */
@@ -3062,55 +3254,6 @@ button {
   .metric-val {
     font-size: 12.5px;
   }
-
-  /* Admin Metrics: 2x2 Grid on Mobile Phones */
-  .admin-metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 10px;
-    margin-bottom: 16px;
-  }
-
-  .metric-card {
-    padding: 14px 12px;
-    gap: 10px;
-  }
-
-  .metric-icon-wrap {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-  }
-
-  .metric-number {
-    font-size: 20px;
-  }
-
-  .metric-label {
-    font-size: 11px;
-  }
-
-  .admin-card-container {
-    padding: 16px 14px;
-  }
-
-  .faculty-form-row {
-    grid-template-columns: 1fr;
-    gap: 8px;
-  }
-
-  .cards-catalog-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .catalog-item-card {
-    padding: 14px;
-  }
-
-  .item-card-actions .btn-small-action {
-    min-height: 36px;
-    padding: 6px 12px;
-  }
 }
 
 /* Extra Compact Phones (< 380px) */
@@ -3138,6 +3281,34 @@ button {
   }
 
   .admin-metrics-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .metric-card {
+    padding: 10px 8px;
+    gap: 6px;
+  }
+
+  .metric-icon-wrap {
+    width: 30px;
+    height: 30px;
+    font-size: 15px;
+  }
+
+  .metric-number {
+    font-size: 16px;
+  }
+
+  .metric-label {
+    font-size: 10px;
+  }
+
+  .admin-top-actions {
+    flex-direction: column;
+  }
+
+  .item-card-actions {
     grid-template-columns: 1fr;
   }
 
@@ -3506,6 +3677,13 @@ button {
   margin-bottom: 18px;
 }
 
+.wallet-section--profile {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 14px;
+}
+
 .wallet-section h4 {
   font-size: 13px;
   font-weight: 800;
@@ -3513,6 +3691,20 @@ button {
   margin: 0 0 10px;
   text-transform: uppercase;
   letter-spacing: 0.4px;
+}
+
+.remember-roll-row {
+  margin-top: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.remember-roll-label {
+  font-size: 12px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
 }
 
 .wallet-job {

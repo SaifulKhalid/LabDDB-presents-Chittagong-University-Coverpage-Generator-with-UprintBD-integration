@@ -11,7 +11,7 @@
   // ---- Cached DOM Element Map -----------------------------------------------
   var el = {};
   var elementIds = [
-    'appLayout', 'courseSelect', 'experimentSelect', 'rollNumber',
+    'appLayout', 'courseSelect', 'experimentSelect', 'rollNumber', 'rememberRollCheckbox',
     'studentName', 'experimentDate', 'submissionDate', 'copies', 'colorMode',
     'generateBtn', 'editBtn', 'toolEditBtn', 'printBtn', 'pdfBtn', 'otpBtn',
     'lookupBadge', 'studentCardPill', 'studentAvatar', 'studentNameVal',
@@ -129,9 +129,41 @@
         console.error('[Firebase] Realtime cvr3_courses listener error:', err);
       });
 
+      // Realtime stats counter listener
+      bindLiveCounter();
+
     } catch (e) {
       console.error('[Firebase] Initialization error:', e);
     }
+  }
+
+  function bindLiveCounter() {
+    if (!db) return;
+    var elBadge = document.getElementById('coverpageLiveCount');
+    if (!elBadge) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').on('value', function (snap) {
+        var count = Number(snap.val()) || 0;
+        if (count > 0) {
+          elBadge.textContent = '⚡ ' + count.toLocaleString() + ' covers generated';
+        } else {
+          elBadge.textContent = '⚡ Live CU Synced';
+        }
+      }, function () {
+        elBadge.textContent = '⚡ Live CU Synced';
+      });
+    } catch (_) {
+      elBadge.textContent = '⚡ Live CU Synced';
+    }
+  }
+
+  function incCoverCounter() {
+    if (!db) return;
+    try {
+      db.ref('cvr3_meta/stats/coverpageCount').transaction(function (c) {
+        return (Number(c) || 0) + 1;
+      }).catch(function () {});
+    } catch (_) {}
   }
 
   function ingestRealtimeCourses(val) {
@@ -432,7 +464,7 @@
       'ID: <strong>' + esc(rollVal || '---') + '</strong><br />' +
       'Session: ' + esc(sessVal || '2023-2024') + '<br />' +
       esc(semVal) + '<br />' +
-      'Dept. of ' + esc(deptVal) + '<br />' +
+      esc(formatDeptLabel(deptVal)) + '<br />' +
       'University of Chittagong';
 
     setField('student', studentHtml);
@@ -446,6 +478,15 @@
     fitPreview();
   }
 
+  function formatDeptLabel(d) {
+    if (!d) return 'Dept. of Electrical and Electronic Engineering';
+    var trimmed = String(d).trim();
+    if (/^(dept\.|department|institute|center|bureau|faculty)/i.test(trimmed)) {
+      return trimmed;
+    }
+    return 'Dept. of ' + trimmed;
+  }
+
   function setField(fieldName, html) {
     if (!el.coverPage) return;
     var node = el.coverPage.querySelector('[data-field="' + fieldName + '"]');
@@ -456,12 +497,13 @@
     var container = el.coverPage.querySelector('[data-field="faculty"]');
     if (!container) return;
 
+    var deptName = dept || 'Electrical and Electronic Engineering';
     if (!facultyMembers || !facultyMembers.length) {
       container.innerHTML =
         '<div class="faculty-block">' +
         '<strong>Course Teacher</strong><br />' +
         'Faculty Member<br />' +
-        'Dept. of ' + esc(dept || 'EEE') + '<br />' +
+        esc(formatDeptLabel(deptName)) + '<br />' +
         'University of Chittagong' +
         '</div>';
       return;
@@ -473,7 +515,7 @@
         '<div class="faculty-block">' +
         '<strong>' + esc(f.name || '—') + '</strong><br />' +
         esc(f.designation || f.title || 'Faculty Member') + '<br />' +
-        'Dept. of ' + esc(f.department || dept || 'EEE') + '<br />' +
+        esc(formatDeptLabel(f.department || deptName)) + '<br />' +
         'University of Chittagong' +
         '</div>';
     });
@@ -657,6 +699,7 @@
       link.href = URL.createObjectURL(blob);
       link.download = filename;
       link.click();
+      incCoverCounter();
 
       if (el.pdfBtn) {
         el.pdfBtn.disabled = false;
@@ -677,6 +720,7 @@
 
   function handlePrint() {
     if (editing) toggleInlineEdit();
+    incCoverCounter();
     window.print();
   }
 
@@ -704,8 +748,9 @@
         if (el.rollNumber && !el.rollNumber.value.trim()) return 'Enter your roll number first.';
         return null;
       },
-    }).then(function () {
+    }).then(function (res) {
       if (el.otpBtn) el.otpBtn.disabled = false;
+      if (res && res.otp) incCoverCounter();
     });
   }
 
@@ -726,6 +771,43 @@
     if (el.rollNumber) {
       el.rollNumber.addEventListener('input', function () {
         handleRollInput(this.value);
+        if (el.rememberRollCheckbox && el.rememberRollCheckbox.checked) {
+          var val = this.value.trim();
+          if (val && val.length >= 3) {
+            if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
+              global.LabDDB.auth.setRememberedRoll(val);
+            } else {
+              localStorage.setItem('labddb_remembered_roll', val);
+            }
+          }
+        }
+      });
+    }
+
+    if (el.rememberRollCheckbox) {
+      el.rememberRollCheckbox.addEventListener('change', function () {
+        var roll = el.rollNumber ? el.rollNumber.value.trim() : '';
+        if (this.checked) {
+          if (roll && roll.length >= 3) {
+            if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
+              global.LabDDB.auth.setRememberedRoll(roll);
+            } else {
+              localStorage.setItem('labddb_remembered_roll', roll);
+            }
+            if (global.Uprint && global.Uprint.showToast) {
+              global.Uprint.showToast('Roll ' + roll + ' will be remembered.', '✓');
+            }
+          }
+        } else {
+          if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.clearRememberedRoll) {
+            global.LabDDB.auth.clearRememberedRoll();
+          } else {
+            localStorage.removeItem('labddb_remembered_roll');
+          }
+          if (global.Uprint && global.Uprint.showToast) {
+            global.Uprint.showToast('Remembered roll cleared.', 'ℹ️');
+          }
+        }
       });
     }
 
@@ -836,6 +918,40 @@
     window.addEventListener('orientationchange', function () {
       setTimeout(fitPreview, 150);
     });
+
+    // Listen for roll changes from profile modal or external tabs
+    window.addEventListener('labddb:roll_changed', function (e) {
+      var newRoll = e && e.detail ? e.detail.roll : '';
+      loadRememberedRoll(newRoll);
+    });
+  }
+
+  // ---- Remembered Roll Auto-Loader ------------------------------------------
+  function loadRememberedRoll(forcedRoll) {
+    var remembered = typeof forcedRoll === 'string'
+      ? forcedRoll
+      : (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.getRememberedRoll
+          ? global.LabDDB.auth.getRememberedRoll()
+          : (localStorage.getItem('labddb_remembered_roll') || ''));
+
+    if (el.rememberRollCheckbox) {
+      el.rememberRollCheckbox.checked = Boolean(remembered);
+    }
+
+    if (remembered && el.rollNumber) {
+      el.rollNumber.value = remembered;
+      lookupStudent(remembered);
+    } else if (!remembered && typeof forcedRoll === 'string') {
+      if (el.rollNumber && el.rollNumber.value === '') {
+        current.student = null;
+        if (el.studentCardPill) el.studentCardPill.style.display = 'none';
+        if (el.lookupBadge) {
+          el.lookupBadge.textContent = 'Enter roll to auto-fill';
+          el.lookupBadge.className = 'helper-badge';
+        }
+        updatePreview();
+      }
+    }
   }
 
   // ---- Bootstrap App --------------------------------------------------------
@@ -844,6 +960,7 @@
     initMobileTabs();
     initEvents();
     initFirebaseRealtime();
+    loadRememberedRoll();
     updateCost();
     if (global.Uprint && global.Uprint.bindBridgeBadge) {
       global.Uprint.bindBridgeBadge(el.bridgeDot, el.bridgeText, 60000);
