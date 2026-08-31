@@ -726,14 +726,19 @@ button {
   position: relative;
   z-index: 20;
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
   transition: background-color 0.25s, border-color 0.25s;
 }
 
 .panel-scroll-content {
-  flex: 1;
+  flex: 1 1 auto;
+  min-height: 0;
   overflow-y: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 14px 14px calc(var(--mobile-nav-height) + 120px + var(--safe-bottom));
+  padding: 14px 14px 20px;
   display: flex;
   flex-direction: column;
   gap: 14px;
@@ -741,11 +746,13 @@ button {
 
 /* Form Cards */
 .form-card {
+  flex-shrink: 0;
+  width: 100%;
   background: var(--bg-card);
   border: 1px solid var(--border);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-xs);
-  overflow: hidden;
+  overflow: visible;
   transition: var(--transition-smooth);
 }
 
@@ -1087,11 +1094,11 @@ button {
 
 /* ---- Action Dock (Sticky Bottom on Mobile) -------------------------------- */
 .action-dock {
-  position: sticky;
-  bottom: 0;
+  flex-shrink: 0;
+  position: relative;
   z-index: 30;
   padding: 10px 14px calc(var(--mobile-nav-height) + 10px + var(--safe-bottom));
-  background: rgba(255, 255, 255, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
   border-top: 1px solid var(--border);
