@@ -130,19 +130,31 @@ for (const [page, html] of Object.entries(pageSource)) {
   else pass(`${page}`);
 }
 
-/* -- 4. Responsive CSS ----------------------------------------------------- */
+/* -- 4. Responsive CSS & Mobile-First Patterns ----------------------------- */
 console.log('\n4. Responsive CSS rules:');
 const css = fs.readFileSync(path.join(PUBLIC_DIR, 'css', 'styles.css'), 'utf8');
 for (const pat of [
   '--safe-top',
   '100dvh',
+  '--touch-target',
   'preview-floating-dock',
   'modal-drag-handle',
-  '@media (max-width: 640px)',
+  '@media (min-width: 641px)',
+  '@media (min-width: 961px)',
+  '@media (min-width: 1024px)',
   'font-size: 16px !important', // iOS zooms any input below 16px on focus
 ]) {
   if (css.includes(pat)) pass(`styles.css contains "${pat}"`);
   else fail(`styles.css missing "${pat}"`);
+}
+
+// Ensure mobile-first: no active (uncommented) max-width media queries
+const uncommentedCss = css.replace(/\/\*[\s\S]*?\*\//g, '');
+const activeMaxWidth = uncommentedCss.match(/@media\s*\(\s*max-width/g);
+if (activeMaxWidth) {
+  fail(`styles.css contains ${activeMaxWidth.length} active max-width media quer${activeMaxWidth.length === 1 ? 'y' : 'ies'} (must be mobile-first min-width)`);
+} else {
+  pass('no active max-width media queries (pure mobile-first min-width)');
 }
 
 console.log('\n----------------------------------------');

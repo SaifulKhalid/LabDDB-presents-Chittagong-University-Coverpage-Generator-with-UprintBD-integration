@@ -481,8 +481,8 @@ button {
 
 /* Icon Buttons (Theme & History) */
 .icon-btn {
-  width: 38px;
-  height: 38px;
+  width: var(--touch-target);
+  height: var(--touch-target);
   border-radius: var(--radius-md);
   border: 1px solid var(--border);
   background: var(--bg-card);
@@ -840,12 +840,6 @@ button {
 
 .footer-link:hover {
   color: var(--primary);
-}
-
-@media (max-width: 768px) {
-  .app-footer {
-    display: none;
-  }
 }
 
 /* ---- Left Form Panel (Sidebar) -------------------------------------------- */
@@ -1345,7 +1339,7 @@ button {
 
 .dock-btn {
   flex: 1;
-  height: 42px;
+  height: var(--touch-target);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1606,7 +1600,7 @@ button {
 
 .float-cta-otp {
   flex: 1.6;
-  height: 42px;
+  height: var(--touch-target);
   background: linear-gradient(135deg, #003366, #09549c);
   color: #fff;
   border-radius: var(--radius-full);
@@ -1627,7 +1621,7 @@ button {
 
 .float-action-btn {
   flex: 1;
-  height: 42px;
+  height: var(--touch-target);
   border-radius: var(--radius-full);
   display: flex;
   align-items: center;
@@ -1881,8 +1875,8 @@ button {
 }
 
 .drawer-close-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--touch-target);
+  height: var(--touch-target);
   border-radius: 50%;
   background: var(--bg-input);
   color: var(--text-secondary);
@@ -2042,8 +2036,8 @@ button {
 }
 
 .modal-close-btn {
-  width: 32px;
-  height: 32px;
+  width: var(--touch-target);
+  height: var(--touch-target);
   border-radius: 50%;
   background: rgba(255, 255, 255, 0.2);
   color: #ffffff;
@@ -2499,6 +2493,7 @@ button {
   align-items: center;
   gap: 8px;
   padding: 10px 18px;
+  min-height: var(--touch-target);
   border-radius: var(--radius-md);
   font-size: 13.5px;
   font-weight: 600;
@@ -2822,121 +2817,850 @@ button {
   margin: 0 auto 12px;
 }
 
+
 /* =============================================================================
-   RESPONSIVE DESIGN & MOBILE OPTIMIZATIONS (Tablet & Mobile Phones)
+   MOBILE-FIRST BASE OVERRIDES
+   Mobile styles are the default. Desktop enhancements layer on top via min-width.
    ============================================================================= */
 
-@media (max-width: 1023px) {
-  .sidebar {
-    display: none;
+/* ---- Mobile Base: was @media (max-width: 380px) ---- */
+/* Extra Compact Phones (< 380px) */
+.brand-logo-wrap {
+  width: 34px;
+  height: 34px;
+
+}
+
+.brand-title {
+  font-size: 14px;
+
+}
+
+.bridge-status-badge .bridge-status-text {
+  display: none;
+
+}
+
+.bridge-status-badge {
+  padding: 6px;
+  border-radius: 50%;
+
+}
+
+.print-config-grid {
+  grid-template-columns: 1fr;
+
+}
+
+.admin-metrics-grid {
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+
+}
+
+.metric-card {
+  padding: 10px 8px;
+  gap: 6px;
+
+}
+
+.metric-icon-wrap {
+  width: 30px;
+  height: 30px;
+  font-size: 15px;
+
+}
+
+.metric-number {
+  font-size: 16px;
+
+}
+
+.metric-label {
+  font-size: 10px;
+
+}
+
+.admin-top-actions {
+  flex-direction: column;
+
+}
+
+.item-card-actions {
+  grid-template-columns: 1fr;
+
+}
+
+.mobile-nav-item {
+  min-width: 46px;
+  padding: 4px;
+
+}
+
+.mobile-nav-item .nav-icon {
+  font-size: 17px;
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 480px) ---- */
+.recharge-buttons-row {
+  grid-template-columns: 1fr;
+
+}
+
+.console-metrics {
+  grid-template-columns: 1fr 1fr;
+
+}
+
+.console-field-row {
+  grid-template-columns: 1fr;
+
+}
+
+.console-table td.wrap {
+  max-width: 180px;
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 640px) ---- */
+/* Mobile Screen Specifics (Phones < 640px) */
+/* Mobile Screen Specifics (Phones < 640px) */
+.form-input,
+  input[type="text"],
+  input[type="number"],
+  input[type="date"],
+  input[type="search"],
+  select,
+  textarea {
+  font-size: 16px !important;
+
+}
+
+.brand-title {
+  font-size: 15px;
+
+}
+
+.brand-sub {
+  display: none;
+
+}
+
+.labddb-switcher-menu {
+  position: fixed;
+  top: auto;
+  right: 10px;
+  left: 10px;
+  width: auto;
+  max-width: calc(100vw - 20px);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+
+}
+
+.bridge-status-badge {
+  padding: 5px 8px;
+  font-size: 11px;
+  gap: 5px;
+
+}
+
+.bridge-status-badge .bridge-status-text {
+  max-width: 80px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+
+}
+
+.print-config-grid {
+  grid-template-columns: 1fr 1.2fr;
+  gap: 8px;
+
+}
+
+.date-row {
+  flex-direction: column;
+  gap: 10px;
+
+}
+
+.admin-header-row {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 16px;
+
+}
+
+.admin-title-group h1 {
+  font-size: 20px;
+
+}
+
+.admin-title-group p {
+  font-size: 12.5px;
+
+}
+
+.admin-top-actions {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+
+}
+
+.admin-top-actions .btn-small-action {
+  flex: 1;
+  justify-content: center;
+  min-height: 40px;
+  padding: 8px 12px;
+  font-size: 12.5px;
+
+}
+
+.admin-metrics-grid {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: 18px;
+
+}
+
+.metric-card {
+  padding: 12px 14px;
+  gap: 10px;
+  border-radius: var(--radius-md);
+
+}
+
+.metric-icon-wrap {
+  width: 38px;
+  height: 38px;
+  font-size: 18px;
+  border-radius: var(--radius-sm);
+
+}
+
+.metric-number {
+  font-size: 19px;
+
+}
+
+.metric-label {
+  font-size: 11px;
+  margin-top: 2px;
+  line-height: 1.25;
+
+}
+
+.admin-tabs-nav {
+  margin-bottom: 16px;
+  padding: 4px;
+  gap: 4px;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: none;
+  scroll-snap-type: x mandatory;
+
+}
+
+.admin-tabs-nav::-webkit-scrollbar {
+  display: none;
+
+}
+
+.admin-tab-btn {
+  flex-shrink: 0;
+  scroll-snap-align: start;
+  padding: 8px 12px;
+  font-size: 12.5px;
+  min-height: 38px;
+  gap: 6px;
+
+}
+
+.admin-card-container {
+  padding: 16px 14px;
+  border-radius: var(--radius-md);
+
+}
+
+.admin-card-header {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+  margin-bottom: 16px;
+
+}
+
+.admin-card-title {
+  font-size: 17px;
+
+}
+
+.admin-search-wrap {
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+
+}
+
+.admin-search-input {
+  padding: 9px 12px 9px 36px;
+
+}
+
+.cards-catalog-grid {
+  grid-template-columns: 1fr;
+  gap: 12px;
+
+}
+
+.catalog-item-card {
+  padding: 14px;
+  gap: 12px;
+
+}
+
+.item-card-title {
+  font-size: 14.5px;
+
+}
+
+.item-card-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  padding-top: 10px;
+
+}
+
+.item-card-actions .btn-small-action {
+  width: 100%;
+  justify-content: center;
+  min-height: 38px;
+  font-size: 12.5px;
+
+}
+
+.faculty-form-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  position: relative;
+  padding: 14px 12px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+
+}
+
+.faculty-form-row .fm-field-col {
+  width: 100%;
+
+}
+
+.faculty-form-row .btn-icon-danger.fm-remove-btn {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
+  margin-top: 0;
+
+}
+
+#editCourseForm > div:last-child,
+  #editStudentForm > div:last-child {
+  flex-direction: column !important;
+  gap: 10px !important;
+
+}
+
+#editCourseForm > div:last-child button,
+  #editStudentForm > div:last-child button {
+  width: 100% !important;
+  min-height: var(--touch-target);
+  flex: unset !important;
+
+}
+
+#addExperimentForm,
+  #addCourseAssignmentForm {
+  flex-direction: column !important;
+  align-items: stretch !important;
+  gap: 10px !important;
+
+}
+
+#addExperimentForm .form-group,
+  #addCourseAssignmentForm .form-group {
+  width: 100% !important;
+  min-width: 0 !important;
+
+}
+
+#addExperimentForm button[type="submit"],
+  #addCourseAssignmentForm button[type="submit"] {
+  width: 100%;
+  justify-content: center;
+  min-height: 42px;
+
+}
+
+.sub-items-table {
+  min-width: 480px;
+
+}
+
+.sub-items-table th,
+  .sub-items-table td {
+  padding: 8px 10px;
+  font-size: 12px;
+  white-space: nowrap;
+
+}
+
+.sub-items-table th:nth-child(2),
+  .sub-items-table td:nth-child(2),
+  .sub-items-table th:nth-child(3),
+  .sub-items-table td:nth-child(3) {
+  white-space: normal;
+  min-width: 140px;
+
+}
+
+.modal-overlay {
+  align-items: flex-end;
+  padding: 0;
+
+}
+
+.modal-card {
+  max-width: 100%;
+  width: 100%;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  border-bottom: none;
+  max-height: 90vh;
+  max-height: 90dvh;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  animation: sheet-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  padding-bottom: var(--safe-bottom);
+
+}
+
+.modal-drag-handle {
+  display: block;
+
+}
+
+@keyframes sheet-up {
+    from { transform: translateY(100%); }
+    to { transform: translateY(0); }
   }
-  .mobile-nav {
-    display: flex;
+
+.modal-head {
+  padding: 14px 18px;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+
+}
+
+.modal-body {
+  padding: 18px 16px 24px;
+
+}
+
+.otp-big-code {
+  font-size: 40px;
+  letter-spacing: 6px;
+
+}
+
+.otp-metrics-grid {
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 6px;
+  padding: 8px;
+
+}
+
+.metric-val {
+  font-size: 12.5px;
+
+}
+
+.account-chip {
+  max-width: 120px;
+  padding-right: 10px;
+
+}
+
+.account-chip-label {
+  display: none;
+
+}
+
+.account-chip--signin {
+  padding: 0;
+  width: 38px;
+  justify-content: center;
+  border-radius: var(--radius-md);
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 720px) ---- */
+/* ---- Mobile Responsive Polish (< 720px & < 480px) ------------------------ */
+.console-header-inner {
+  padding: 10px 14px;
+  gap: 8px;
+
+}
+
+.console-brand-sub {
+  display: none;
+
+}
+
+.console-brand-title {
+  font-size: 15px;
+
+}
+
+.console-brand-mark {
+  width: 34px;
+  height: 34px;
+  font-size: 12px;
+
+}
+
+.console-pill {
+  padding: 5px 9px;
+  font-size: 11.5px;
+  max-width: 140px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+}
+
+.console-tabs {
+  padding: 0 14px 6px;
+  gap: 4px;
+
+}
+
+.console-tab {
+  padding: 7px 12px;
+  font-size: 12px;
+
+}
+
+.console-main {
+  padding: 16px 14px calc(40px + var(--safe-bottom));
+
+}
+
+.console-metrics {
+  grid-template-columns: repeat(2, 1fr);
+  gap: 8px;
+
+}
+
+.console-metric {
+  padding: 12px 14px;
+
+}
+
+.console-metric-value {
+  font-size: 20px;
+
+}
+
+.console-metric-label {
+  font-size: 10px;
+
+}
+
+.console-card-head {
+  padding: 12px 14px;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+
+}
+
+.console-head-tools {
+  width: 100%;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+
+}
+
+.console-search,
+  .console-filter {
+  width: 100%;
+  flex: 1 1 100%;
+
+}
+
+.console-segment {
+  width: 100%;
+  display: flex;
+
+}
+
+.console-segment-btn {
+  flex: 1;
+  text-align: center;
+  padding: 7px 8px;
+
+}
+
+.console-table th,
+  .console-table td {
+  padding: 9px 11px;
+  font-size: 12px;
+
+}
+
+.console-table td.actions .btn {
+  min-height: 34px;
+  padding: 6px 10px;
+  font-size: 11px;
+
+}
+
+.console-field-row {
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+
+}
+
+.console-actions-bar {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+
+}
+
+.console-actions-bar .btn {
+  width: 100%;
+  min-height: var(--touch-target);
+
+}
+
+.admin-lock-card {
+  max-width: calc(100vw - 28px);
+  padding: 24px 18px;
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 768px) ---- */
+.app-footer {
+  display: none;
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 960px) ---- */
+.app-header {
+  height: auto;
+  min-height: var(--header-height-mobile);
+
+}
+
+.header-inner {
+  padding: 8px 14px;
+  gap: 8px;
+
+}
+
+.mobile-tabs {
+  display: flex;
+
+}
+
+.app-layout {
+  height: calc(100vh - 104px - var(--safe-top));
+  height: calc(100dvh - 104px - var(--safe-top));
+  flex-direction: column;
+  overflow: hidden;
+
+}
+
+.app-layout[data-active-tab="editor"] .form-panel {
+  display: flex;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border-right: none;
+  height: 100%;
+
+}
+
+.app-layout[data-active-tab="editor"] .preview-panel {
+  display: none;
+
+}
+
+.app-layout[data-active-tab="preview"] .form-panel {
+  display: none;
+
+}
+
+.app-layout[data-active-tab="preview"] .preview-panel {
+  display: flex;
+  width: 100%;
+  height: 100%;
+
+}
+
+.app-layout[data-active-tab="preview"] .preview-floating-dock {
+  display: flex;
+
+}
+
+.mobile-only-tool {
+  display: flex;
+
+}
+
+.preview-canvas-viewport {
+  padding: 16px 8px calc(var(--mobile-nav-height) + 72px + var(--safe-bottom));
+
+}
+
+.panel-scroll-content {
+  padding: 14px 14px 20px;
+  padding-bottom: 24px;
+
+}
+
+.action-dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  padding: 10px 14px calc(var(--mobile-nav-height) + 10px + var(--safe-bottom));
+  background: rgba(255, 255, 255, 0.92);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+}
+
+[data-theme="dark"] .action-dock {
+  background: rgba(19, 29, 51, 0.92);
+
+}
+
+.btn-cta-otp {
+  min-height: 48px;
+
+}
+
+.cta-main-title {
+  font-size: 14px;
+
+}
+
+.workstation-toolbar {
+  padding: 0 12px;
+  height: 46px;
+
+}
+
+.admin-wrapper {
+  padding: 16px 14px calc(var(--mobile-nav-height) + 24px + var(--safe-bottom));
+
+}
+
+/* ---- Mobile Base: was @media (max-width: 1023px) ---- */
+.sidebar {
+  display: none;
+
+}
+
+.mobile-nav {
+  display: flex;
+
+}
+
+
+/* =============================================================================
+   DESKTOP ENHANCEMENTS (min-width progressive enhancement)
+   These blocks restore desktop-specific values, layering outward from mobile.
+   ============================================================================= */
+
+/* Desktop Enhancement: ≥381px (was max-width: 380px) */
+@media (min-width: 381px) {
+.brand-logo-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .brand-title {
+    font-size: 18px;
+  }
+
+  .bridge-status-badge {
+    padding: 6px 12px;
+    border-radius: var(--radius-full);
+  }
+
+  .print-config-grid {
+    grid-template-columns: 1fr 1.3fr;
+  }
+
+  .admin-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+  }
+
+  .metric-card {
+    padding: 18px 20px;
+    gap: 16px;
+  }
+
+  .metric-icon-wrap {
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+  }
+
+  .metric-number {
+    font-size: 24px;
+  }
+
+  .metric-label {
+    font-size: 12px;
+  }
+
+  .mobile-nav-item {
+    min-width: 48px;
+    padding: 6px 4px;
   }
 }
 
-@media (max-width: 960px) {
-  .app-header {
-    height: auto;
-    min-height: var(--header-height-mobile);
+/* Desktop Enhancement: ≥481px (was max-width: 480px) */
+@media (min-width: 481px) {
+.recharge-buttons-row {
+    grid-template-columns: 1fr 1fr;
   }
 
-  .header-inner {
-    padding: 8px 14px;
-    gap: 8px;
+  .console-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
   }
 
-  .mobile-tabs {
-    display: flex;
+  .console-field-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
   }
 
-  .app-layout {
-    height: calc(100vh - 104px - var(--safe-top));
-    height: calc(100dvh - 104px - var(--safe-top));
-    flex-direction: column;
-    overflow: hidden;
-  }
-
-  /* View Switcher: Editor Form vs Live Preview */
-  .app-layout[data-active-tab="editor"] .form-panel {
-    display: flex;
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
-    border-right: none;
-    height: 100%;
-  }
-
-  .app-layout[data-active-tab="editor"] .preview-panel {
-    display: none;
-  }
-
-  .app-layout[data-active-tab="preview"] .form-panel {
-    display: none;
-  }
-
-  .app-layout[data-active-tab="preview"] .preview-panel {
-    display: flex;
-    width: 100%;
-    height: 100%;
-  }
-
-  .app-layout[data-active-tab="preview"] .preview-floating-dock {
-    display: flex;
-  }
-
-  .mobile-only-tool {
-    display: flex;
-  }
-
-  .preview-canvas-viewport {
-    padding: 16px 8px calc(var(--mobile-nav-height) + 72px + var(--safe-bottom));
-  }
-
-  .panel-scroll-content {
-    padding: 14px 14px 20px;
-    padding-bottom: 24px;
-  }
-
-  /* Sticky Action Dock in Editor */
-  .action-dock {
-    position: sticky;
-    bottom: 0;
-    z-index: 30;
-    padding: 10px 14px calc(var(--mobile-nav-height) + 10px + var(--safe-bottom));
-    background: rgba(255, 255, 255, 0.92);
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-  }
-
-  [data-theme="dark"] .action-dock {
-    background: rgba(19, 29, 51, 0.92);
-  }
-
-  .btn-cta-otp {
-    min-height: 48px;
-  }
-
-  .cta-main-title {
-    font-size: 14px;
-  }
-
-  /* Workstation toolbar compact */
-  .workstation-toolbar {
-    padding: 0 12px;
-    height: 46px;
-  }
-
-  /* Admin Wrapper mobile spacing */
-  .admin-wrapper {
-    padding: 16px 14px calc(var(--mobile-nav-height) + 24px + var(--safe-bottom));
+  .console-table td.wrap {
+    max-width: 260px;
   }
 }
 
-/* Mobile Screen Specifics (Phones < 640px) */
-/* Mobile Screen Specifics (Phones < 640px) */
-@media (max-width: 640px) {
-  /* Prevent iOS Auto-Zoom on form input focus by setting 16px font size */
+/* Desktop Enhancement: ≥641px (was max-width: 640px) */
+@media (min-width: 641px) {
+  /* Undo iOS auto-zoom prevention — restore desktop font size */
   .form-input,
   input[type="text"],
   input[type="number"],
@@ -2944,119 +3668,94 @@ button {
   input[type="search"],
   select,
   textarea {
-    font-size: 16px !important;
+    font-size: 14px !important;
   }
 
   .brand-title {
-    font-size: 15px;
+    font-size: 18px;
   }
 
   .brand-sub {
-    display: none;
+    display: flex;
   }
 
   .labddb-switcher-menu {
-    position: fixed;
-    top: auto;
-    right: 10px;
-    left: 10px;
-    width: auto;
-    max-width: calc(100vw - 20px);
-    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+    position: absolute;
+    top: calc(100% + 8px);
+    right: 0;
+    width: 290px;
+    box-shadow: var(--shadow-lg);
   }
 
   .bridge-status-badge {
-    padding: 5px 8px;
-    font-size: 11px;
-    gap: 5px;
-  }
-
-  .bridge-status-badge .bridge-status-text {
-    max-width: 80px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    padding: 6px 12px;
+    font-size: 12px;
+    gap: 7px;
   }
 
   .print-config-grid {
-    grid-template-columns: 1fr 1.2fr;
-    gap: 8px;
+    grid-template-columns: 1fr 1.3fr;
+    gap: 12px;
   }
 
   .date-row {
-    flex-direction: column;
-    gap: 10px;
+    gap: 12px;
   }
 
-  /* Admin Header & Tabs Mobile */
   .admin-header-row {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 16px;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
   }
 
   .admin-title-group h1 {
-    font-size: 20px;
+    font-size: 26px;
   }
 
   .admin-title-group p {
-    font-size: 12.5px;
+    font-size: 13.5px;
   }
 
   .admin-top-actions {
     display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .admin-top-actions .btn-small-action {
-    flex: 1;
-    justify-content: center;
-    min-height: 40px;
-    padding: 8px 12px;
-    font-size: 12.5px;
-  }
-
-  /* Admin Metrics 2x2 Grid on Mobile */
-  .admin-metrics-grid {
-    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
-    margin-bottom: 18px;
+  }
+
+  .admin-metrics-grid {
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
   }
 
   .metric-card {
-    padding: 12px 14px;
-    gap: 10px;
-    border-radius: var(--radius-md);
+    padding: 18px 20px;
+    gap: 16px;
+    border-radius: var(--radius-lg);
   }
 
   .metric-icon-wrap {
-    width: 38px;
-    height: 38px;
-    font-size: 18px;
-    border-radius: var(--radius-sm);
+    width: 48px;
+    height: 48px;
+    font-size: 22px;
+    border-radius: var(--radius-md);
   }
 
   .metric-number {
-    font-size: 19px;
+    font-size: 24px;
   }
 
   .metric-label {
-    font-size: 11px;
-    margin-top: 2px;
-    line-height: 1.25;
+    font-size: 12px;
+    margin-top: 4px;
   }
 
-  /* Admin Tabs Navigation Mobile */
   .admin-tabs-nav {
-    margin-bottom: 16px;
-    padding: 4px;
-    gap: 4px;
+    margin-bottom: 24px;
+    padding: 6px;
+    gap: 6px;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
-    scroll-snap-type: x mandatory;
   }
 
   .admin-tabs-nav::-webkit-scrollbar {
@@ -3064,141 +3763,153 @@ button {
   }
 
   .admin-tab-btn {
-    flex-shrink: 0;
-    scroll-snap-align: start;
-    padding: 8px 12px;
-    font-size: 12.5px;
-    min-height: 38px;
-    gap: 6px;
+    padding: 10px 18px;
+    font-size: 13.5px;
+    gap: 8px;
   }
 
-  /* Admin Card Container Mobile */
   .admin-card-container {
-    padding: 16px 14px;
-    border-radius: var(--radius-md);
+    padding: 24px;
+    border-radius: var(--radius-lg);
   }
 
   .admin-card-header {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 12px;
-    margin-bottom: 16px;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 20px;
   }
 
   .admin-card-title {
-    font-size: 17px;
+    font-size: 19px;
   }
 
   .admin-search-wrap {
-    width: 100%;
-    max-width: 100%;
-    min-width: 0;
+    max-width: 450px;
+    min-width: 260px;
   }
 
   .admin-search-input {
-    padding: 9px 12px 9px 36px;
+    padding: 10px 14px 10px 38px;
   }
 
-  /* Catalog Cards Grid on Mobile (Single Column, Full-width Actions) */
   .cards-catalog-grid {
-    grid-template-columns: 1fr;
-    gap: 12px;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
   }
 
   .catalog-item-card {
-    padding: 14px;
-    gap: 12px;
+    padding: 18px;
+    gap: 14px;
   }
 
   .item-card-title {
-    font-size: 14.5px;
+    font-size: 15px;
   }
 
   .item-card-actions {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-    padding-top: 10px;
-  }
-
-  .item-card-actions .btn-small-action {
-    width: 100%;
-    justify-content: center;
-    min-height: 38px;
-    font-size: 12.5px;
-  }
-
-  /* Faculty Form Rows on Mobile: Stack into Clean Cards */
-  .faculty-form-row {
     display: flex;
-    flex-direction: column;
+    gap: 8px;
+    padding-top: 12px;
+  }
+
+  .faculty-form-row {
+    display: grid;
     gap: 10px;
-    position: relative;
-    padding: 14px 12px 12px;
-    background: var(--bg-surface);
+    padding: 10px 14px;
+    background: var(--bg-input);
     border: 1px solid var(--border);
     border-radius: var(--radius-md);
   }
 
-  .faculty-form-row .fm-field-col {
+  .sub-items-table th,
+  .sub-items-table td {
+    padding: 10px 14px;
+    font-size: 13px;
+  }
+
+  .modal-overlay {
+    align-items: center;
+    padding: 20px;
+  }
+
+  .modal-card {
+    max-width: 460px;
     width: 100%;
+    border-radius: var(--radius-lg);
+    animation: modal-pop 0.25s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
-  .faculty-form-row .btn-icon-danger.fm-remove-btn {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    width: 32px;
-    height: 32px;
-    margin-top: 0;
+  .modal-drag-handle {
+    display: none;
   }
 
-  /* Course Edit / Student Edit Action Buttons on Mobile */
+  .modal-head {
+    padding: 20px 24px;
+  }
+
+  .modal-body {
+    padding: 24px;
+  }
+
+  .otp-big-code {
+    font-size: 48px;
+    letter-spacing: 8px;
+  }
+
+  .otp-metrics-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px;
+    padding: 10px;
+  }
+
+  .metric-val {
+    font-size: 14px;
+  }
+
+  .account-chip {
+    max-width: 168px;
+  }
+
+  .account-chip--signin {
+    padding: 0 14px;
+    width: auto;
+    justify-content: flex-start;
+    border-radius: var(--radius-full);
+  }
+
+  /* Undo mobile-only admin form stacking */
   #editCourseForm > div:last-child,
   #editStudentForm > div:last-child {
-    flex-direction: column !important;
+    flex-direction: row !important;
     gap: 10px !important;
   }
 
   #editCourseForm > div:last-child button,
   #editStudentForm > div:last-child button {
-    width: 100% !important;
-    min-height: var(--touch-target);
-    flex: unset !important;
+    width: auto !important;
+    flex: 1 !important;
   }
 
-  /* Experiment / Assignment Add Inline Forms on Mobile */
   #addExperimentForm,
   #addCourseAssignmentForm {
-    flex-direction: column !important;
-    align-items: stretch !important;
+    flex-direction: row !important;
+    align-items: flex-end !important;
     gap: 10px !important;
   }
 
   #addExperimentForm .form-group,
   #addCourseAssignmentForm .form-group {
-    width: 100% !important;
+    width: auto !important;
     min-width: 0 !important;
   }
 
   #addExperimentForm button[type="submit"],
   #addCourseAssignmentForm button[type="submit"] {
-    width: 100%;
-    justify-content: center;
-    min-height: 42px;
+    width: auto;
   }
 
-  /* Sub-Items and Global Assignment Tables — wrapper handles scroll,
-     table keeps native display for correct thead/tbody rendering */
   .sub-items-table {
-    min-width: 480px;
-  }
-
-  .sub-items-table th,
-  .sub-items-table td {
-    padding: 8px 10px;
-    font-size: 12px;
-    white-space: nowrap;
+    min-width: 0;
   }
 
   .sub-items-table th:nth-child(2),
@@ -3209,122 +3920,231 @@ button {
     min-width: 140px;
   }
 
-  /* Transform Modal into Native Mobile Bottom Sheet */
-  .modal-overlay {
-    align-items: flex-end;
-    padding: 0;
+  .faculty-form-row {
+    grid-template-columns: 1fr 1fr 1fr auto;
+    position: static;
   }
 
-  .modal-card {
-    max-width: 100%;
-    width: 100%;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-    border-bottom: none;
-    max-height: 90vh;
-    max-height: 90dvh;
-    overflow-y: auto;
-    -webkit-overflow-scrolling: touch;
-    animation: sheet-up 0.3s cubic-bezier(0.16, 1, 0.3, 1);
-    padding-bottom: var(--safe-bottom);
+  .faculty-form-row .fm-field-col {
+    width: auto;
   }
 
-  .modal-drag-handle {
-    display: block;
-  }
-
-  @keyframes sheet-up {
-    from { transform: translateY(100%); }
-    to { transform: translateY(0); }
-  }
-
-  .modal-head {
-    padding: 14px 18px;
-    border-radius: var(--radius-xl) var(--radius-xl) 0 0;
-  }
-
-  .modal-body {
-    padding: 18px 16px 24px;
-  }
-
-  .otp-big-code {
-    font-size: 40px;
-    letter-spacing: 6px;
-  }
-
-  .otp-metrics-grid {
-    grid-template-columns: 1fr 1fr 1fr;
-    gap: 6px;
-    padding: 8px;
-  }
-
-  .metric-val {
-    font-size: 12.5px;
+  .faculty-form-row .btn-icon-danger.fm-remove-btn {
+    position: static;
+    width: 36px;
+    height: 36px;
+    margin-top: 2px;
   }
 }
 
-/* Extra Compact Phones (< 380px) */
-@media (max-width: 380px) {
-  .brand-logo-wrap {
-    width: 34px;
-    height: 34px;
+/* Desktop Enhancement: ≥721px (was max-width: 720px) */
+@media (min-width: 721px) {
+.console-header-inner {
+    padding: 12px 20px;
+    gap: 14px;
   }
 
-  .brand-title {
-    font-size: 14px;
-  }
-
-  .bridge-status-badge .bridge-status-text {
-    display: none;
-  }
-
-  .bridge-status-badge {
-    padding: 6px;
-    border-radius: 50%;
-  }
-
-  .print-config-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .admin-metrics-grid {
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .metric-card {
-    padding: 10px 8px;
-    gap: 6px;
-  }
-
-  .metric-icon-wrap {
-    width: 30px;
-    height: 30px;
-    font-size: 15px;
-  }
-
-  .metric-number {
+  .console-brand-title {
     font-size: 16px;
   }
 
-  .metric-label {
-    font-size: 10px;
+  .console-brand-mark {
+    width: 38px;
+    height: 38px;
+    font-size: 13px;
   }
 
-  .admin-top-actions {
-    flex-direction: column;
+  .console-pill {
+    padding: 6px 12px;
+    font-size: 12px;
   }
 
-  .item-card-actions {
-    grid-template-columns: 1fr;
+  .console-tabs {
+    padding: 0 20px 6px;
+    gap: 4px;
   }
 
-  .mobile-nav-item {
-    min-width: 46px;
-    padding: 4px;
+  .console-tab {
+    padding: 8px 14px;
+    font-size: 13px;
   }
 
-  .mobile-nav-item .nav-icon {
-    font-size: 17px;
+  .console-main {
+    padding: 20px 20px calc(48px + var(--safe-bottom));
+  }
+
+  .console-metrics {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 170px), 1fr));
+    gap: 12px;
+  }
+
+  .console-metric {
+    padding: 14px 16px;
+  }
+
+  .console-metric-value {
+    font-size: 24px;
+  }
+
+  .console-metric-label {
+    font-size: 11px;
+  }
+
+  .console-card-head {
+    padding: 14px 18px;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .console-head-tools {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .console-segment {
+    display: inline-flex;
+  }
+
+  .console-segment-btn {
+    padding: 5px 12px;
+  }
+
+  .console-table td.actions .btn {
+    min-height: 32px;
+    padding: 5px 10px;
+  }
+
+  .console-field-row {
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 150px), 1fr));
+    gap: 14px;
+  }
+
+  .console-actions-bar {
+    align-items: center;
+    gap: 14px;
+  }
+
+  .admin-lock-card {
+    max-width: 420px;
+    padding: 32px 28px;
+  }
+}
+
+/* Desktop Enhancement: ≥769px (was max-width: 768px) */
+@media (min-width: 769px) {
+.app-footer {
+    display: flex;
+  }
+}
+
+/* Desktop Enhancement: ≥961px (was max-width: 960px) */
+@media (min-width: 961px) {
+  .app-header {
+    height: var(--header-height);
+    min-height: unset;
+  }
+
+  .header-inner {
+    padding: 0 20px;
+    gap: 12px;
+  }
+
+  .mobile-tabs {
+    display: none;
+  }
+
+  .app-layout {
+    height: calc(100vh - var(--header-height));
+    flex-direction: row;
+    overflow: hidden;
+  }
+
+  /* Undo mobile tab switching — both panels visible on desktop */
+  .app-layout[data-active-tab="editor"] .form-panel {
+    display: flex;
+    width: 420px;
+    min-width: 360px;
+    max-width: 480px;
+    border-right: 1px solid var(--border);
+    height: 100%;
+  }
+
+  .app-layout[data-active-tab="editor"] .preview-panel {
+    display: flex;
+  }
+
+  .app-layout[data-active-tab="preview"] .form-panel {
+    display: flex;
+    width: 420px;
+    min-width: 360px;
+    max-width: 480px;
+    border-right: 1px solid var(--border);
+  }
+
+  .app-layout[data-active-tab="preview"] .preview-panel {
+    display: flex;
+    width: auto;
+    height: auto;
+  }
+
+  .app-layout[data-active-tab="preview"] .preview-floating-dock {
+    display: none;
+  }
+
+  .mobile-only-tool {
+    display: none;
+  }
+
+  .preview-canvas-viewport {
+    padding: 36px 20px 80px;
+  }
+
+  .panel-scroll-content {
+    padding: 20px;
+  }
+
+  /* Undo sticky mobile action dock */
+  .action-dock {
+    position: static;
+    bottom: auto;
+    z-index: auto;
+    padding: 14px 20px 18px;
+    background: var(--bg-surface);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+  }
+
+  [data-theme="dark"] .action-dock {
+    background: var(--bg-surface);
+  }
+
+  .btn-cta-otp {
+    min-height: 52px;
+  }
+
+  .cta-main-title {
+    font-size: 15px;
+  }
+
+  .workstation-toolbar {
+    padding: 0 20px;
+    height: 52px;
+  }
+
+  .admin-wrapper {
+    padding: 24px 20px 80px;
+  }
+}
+
+/* Desktop Enhancement: ≥1024px (was max-width: 1023px) */
+@media (min-width: 1024px) {
+.sidebar {
+    display: flex;
+  }
+
+  .mobile-nav {
+    display: none;
   }
 }
 
@@ -3523,22 +4343,6 @@ button {
   overflow: hidden;
   text-overflow: ellipsis;
   max-width: 96px;
-}
-
-@media (max-width: 640px) {
-  .account-chip {
-    max-width: 120px;
-    padding-right: 10px;
-  }
-  .account-chip-label {
-    display: none;
-  }
-  .account-chip--signin {
-    padding: 0;
-    width: 38px;
-    justify-content: center;
-    border-radius: var(--radius-md);
-  }
 }
 
 /* --- the sign-in / wallet sheet (reuses .modal-overlay + .modal-card) ------ */
@@ -3901,12 +4705,6 @@ button {
   border-radius: var(--radius-sm);
   font-size: 12px;
   color: var(--text-secondary);
-}
-
-@media (max-width: 480px) {
-  .recharge-buttons-row {
-    grid-template-columns: 1fr;
-  }
 }
 
 .insufficient-steps {
@@ -4622,120 +5420,5 @@ button {
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   background: var(--bg-card);
-}
-
-/* ---- Mobile Responsive Polish (< 720px & < 480px) ------------------------ */
-@media (max-width: 720px) {
-  .console-header-inner {
-    padding: 10px 14px;
-    gap: 8px;
-  }
-  .console-brand-sub {
-    display: none;
-  }
-  .console-brand-title {
-    font-size: 15px;
-  }
-  .console-brand-mark {
-    width: 34px;
-    height: 34px;
-    font-size: 12px;
-  }
-  .console-pill {
-    padding: 5px 9px;
-    font-size: 11.5px;
-    max-width: 140px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-  }
-  .console-tabs {
-    padding: 0 14px 6px;
-    gap: 4px;
-  }
-  .console-tab {
-    padding: 7px 12px;
-    font-size: 12px;
-  }
-  .console-main {
-    padding: 16px 14px calc(40px + var(--safe-bottom));
-  }
-  .console-metrics {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 8px;
-  }
-  .console-metric {
-    padding: 12px 14px;
-  }
-  .console-metric-value {
-    font-size: 20px;
-  }
-  .console-metric-label {
-    font-size: 10px;
-  }
-  .console-card-head {
-    padding: 12px 14px;
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .console-head-tools {
-    width: 100%;
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-  }
-  .console-search,
-  .console-filter {
-    width: 100%;
-    flex: 1 1 100%;
-  }
-  .console-segment {
-    width: 100%;
-    display: flex;
-  }
-  .console-segment-btn {
-    flex: 1;
-    text-align: center;
-    padding: 7px 8px;
-  }
-  .console-table th,
-  .console-table td {
-    padding: 9px 11px;
-    font-size: 12px;
-  }
-  .console-table td.actions .btn {
-    min-height: 34px;
-    padding: 6px 10px;
-    font-size: 11px;
-  }
-  .console-field-row {
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
-  }
-  .console-actions-bar {
-    flex-direction: column;
-    align-items: stretch;
-    gap: 10px;
-  }
-  .console-actions-bar .btn {
-    width: 100%;
-    min-height: var(--touch-target);
-  }
-  .admin-lock-card {
-    max-width: calc(100vw - 28px);
-    padding: 24px 18px;
-  }
-}
-
-@media (max-width: 480px) {
-  .console-metrics {
-    grid-template-columns: 1fr 1fr;
-  }
-  .console-field-row {
-    grid-template-columns: 1fr;
-  }
-  .console-table td.wrap {
-    max-width: 180px;
-  }
 }
 

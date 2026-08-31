@@ -816,9 +816,9 @@
       var title = exp.title || exp.expTitle || 'Experiment ' + num;
       html +=
         '<tr>' +
-        '  <td><strong>' + esc(num) + '</strong></td>' +
-        '  <td>' + esc(title) + '</td>' +
-        '  <td style="text-align: right;"><button type="button" class="btn-small-action danger delete-exp-btn" data-idx="' + idx + '">✕ Delete</button></td>' +
+        '  <td data-label="Exp No"><strong>' + esc(num) + '</strong></td>' +
+        '  <td data-label="Experiment Title">' + esc(title) + '</td>' +
+        '  <td data-label="Action" style="text-align: right;"><button type="button" class="btn-small-action danger delete-exp-btn" data-idx="' + idx + '">✕ Delete</button></td>' +
         '</tr>';
     });
 
@@ -850,10 +850,10 @@
       var a = assignmentsObj[aId];
       html +=
         '<tr>' +
-        '  <td><strong>' + esc(a.assignmentNumber || '—') + '</strong></td>' +
-        '  <td>' + esc(a.assignmentTitle || 'Untitled') + '</td>' +
-        '  <td>' + esc(a.submissionDate || '—') + '</td>' +
-        '  <td style="text-align: right;"><button type="button" class="btn-small-action danger delete-assign-btn" data-id="' + aId + '">✕ Delete</button></td>' +
+        '  <td data-label="No"><strong>' + esc(a.assignmentNumber || '—') + '</strong></td>' +
+        '  <td data-label="Assignment Title">' + esc(a.assignmentTitle || 'Untitled') + '</td>' +
+        '  <td data-label="Submission Date">' + esc(a.submissionDate || '—') + '</td>' +
+        '  <td data-label="Action" style="text-align: right;"><button type="button" class="btn-small-action danger delete-assign-btn" data-id="' + aId + '">✕ Delete</button></td>' +
         '</tr>';
     });
 
@@ -1151,11 +1151,11 @@
     filtered.forEach(function (r) {
       html +=
         '<tr>' +
-        '  <td><span class="item-code-badge">' + esc(r.courseCode) + '</span></td>' +
-        '  <td><strong>' + esc(r.assignNum) + '</strong></td>' +
-        '  <td>' + esc(r.assignTitle) + '</td>' +
-        '  <td>' + esc(r.subDate) + '</td>' +
-        '  <td style="text-align: right;"><button type="button" class="btn-small-action danger delete-global-assign-btn" data-course="' + esc(r.courseKey) + '" data-assign="' + esc(r.assignId) + '">✕ Delete</button></td>' +
+        '  <td data-label="Course"><span class="item-code-badge">' + esc(r.courseCode) + '</span></td>' +
+        '  <td data-label="No"><strong>' + esc(r.assignNum) + '</strong></td>' +
+        '  <td data-label="Title">' + esc(r.assignTitle) + '</td>' +
+        '  <td data-label="Submission Date">' + esc(r.subDate) + '</td>' +
+        '  <td data-label="Action" style="text-align: right;"><button type="button" class="btn-small-action danger delete-global-assign-btn" data-course="' + esc(r.courseKey) + '" data-assign="' + esc(r.assignId) + '">✕ Delete</button></td>' +
         '</tr>';
     });
 
