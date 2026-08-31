@@ -1510,6 +1510,14 @@ button {
   background-color: #f8fafc;
 }
 
+.cover-table .center,
+.cover-table td.center,
+.cell-header {
+  text-align: center;
+  font-weight: 700;
+  background-color: #f8fafc;
+}
+
 .submitted-section {
   margin-top: 16px;
 }
@@ -1518,21 +1526,38 @@ button {
   width: 100%;
 }
 
-.student-info {
-  font-size: 11pt;
-  line-height: 1.6;
+/* Submitted To Section: Centered Alignment */
+.faculty-table td,
+.faculty-cell {
+  text-align: center;
+  vertical-align: middle;
 }
 
 .faculty-multi {
   display: flex;
   flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
   gap: 20px;
+  margin: 0 auto;
 }
 
 .faculty-block {
   font-size: 11pt;
   line-height: 1.4;
   color: #111111;
+  text-align: center;
+  margin: 0 auto;
+}
+
+/* Submitted By Section: Left Alignment */
+.student-table td.student-info,
+.student-info {
+  font-size: 11pt;
+  line-height: 1.6;
+  text-align: left;
+  padding: 10px 14px;
 }
 
 /* Index Page A4 Document */
