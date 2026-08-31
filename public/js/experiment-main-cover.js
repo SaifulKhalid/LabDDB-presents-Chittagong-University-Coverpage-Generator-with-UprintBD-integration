@@ -62,6 +62,8 @@
 
   // ---- Mobile Tab Switching -------------------------------------------------
   function initMobileTabs() {
+    var initialTab = (el.appLayout && el.appLayout.getAttribute('data-active-tab')) || 'editor';
+    switchTab(initialTab);
     if (el.tabEditor) {
       el.tabEditor.addEventListener('click', function () {
         switchTab('editor');
