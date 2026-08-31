@@ -96,7 +96,12 @@
       } else {
         el.tabEditor.classList.remove('active');
         el.tabPreview.classList.add('active');
-        setTimeout(fitPreview, 80);
+        updatePreview();
+        requestAnimationFrame(function () {
+          fitPreview();
+          setTimeout(fitPreview, 60);
+          setTimeout(fitPreview, 250);
+        });
       }
     }
   }
@@ -174,6 +179,10 @@
   }
 
   function ingestRealtimeCourses(val) {
+    try {
+      localStorage.setItem('cvr3_courses_cache', JSON.stringify(val));
+    } catch (_) {}
+
     var prevSelectedCode = el.courseSelect ? el.courseSelect.value : null;
     courses = {};
     theoryList = [];
@@ -487,26 +496,38 @@
     var cov = el.coverPage;
     if (!cont || !sc || !cov) return;
 
-    sc.style.transform = 'none';
-    var cw = cov.scrollWidth || 794;
-    var ch = cov.scrollHeight || 1123;
-    var aw = cont.clientWidth - (window.innerWidth < 640 ? 16 : 40);
-    var ah = cont.clientHeight - (window.innerWidth < 640 ? 20 : 40);
+    var paddingX = window.innerWidth < 640 ? 16 : 40;
+    var paddingY = window.innerWidth < 640 ? 20 : 40;
+    var aw = cont.clientWidth - paddingX;
+    var ah = cont.clientHeight - paddingY;
     if (aw <= 0 || ah <= 0) return;
 
+    var cw = 794;
+    var ch = 1123;
     var scale = Math.min(aw / cw, ah / ch, 1.05);
-    currentScale = Math.max(0.25, Math.min(scale, 1.5));
-    applyScale();
-    if (el.zoomLevelBtn) el.zoomLevelBtn.textContent = Math.round(currentScale * 100) + '%';
+    currentScale = Math.max(0.2, Math.min(scale, 2.0));
+    applyScale(currentScale);
   }
 
-  function applyScale() {
-    if (!el.previewScale || !el.coverPage) return;
-    var cw = el.coverPage.scrollWidth || 794;
-    var ch = el.coverPage.scrollHeight || 1123;
-    el.previewScale.style.transform = 'scale(' + currentScale + ')';
-    el.previewScale.style.width = Math.round(cw * currentScale) + 'px';
-    el.previewScale.style.height = Math.round(ch * currentScale) + 'px';
+  function applyScale(scale) {
+    if (!el.previewScale) return;
+    if (typeof scale === 'number') currentScale = scale;
+    var sc = el.previewScale;
+    var cw = 794;
+    var ch = 1123;
+    sc.style.width = cw + 'px';
+    sc.style.minWidth = cw + 'px';
+    sc.style.height = ch + 'px';
+    sc.style.transformOrigin = 'top center';
+    sc.style.transform = 'scale(' + currentScale + ')';
+
+    var mb = Math.round(ch * (currentScale - 1));
+    var mx = Math.round(cw * (currentScale - 1) / 2);
+    sc.style.marginBottom = mb + 'px';
+    sc.style.marginLeft = mx + 'px';
+    sc.style.marginRight = mx + 'px';
+
+    if (el.zoomLevelBtn) el.zoomLevelBtn.textContent = Math.round(currentScale * 100) + '%';
   }
 
   function zoomIn() {
@@ -1026,6 +1047,15 @@
     initMobileTabs();
     bindEvents();
     updateCostCalculator();
+
+    // Instant cache hydration
+    var cachedCourses = localStorage.getItem('cvr3_courses_cache');
+    if (cachedCourses) {
+      try {
+        ingestRealtimeCourses(JSON.parse(cachedCourses));
+      } catch (_) {}
+    }
+
     initFirebaseRealtime();
     loadRememberedRoll();
     checkBridge();
