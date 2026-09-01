@@ -263,16 +263,25 @@
     return gate
       .then(function () {
         var currentAuth = auth();
-        // Check DDB balance: if less than 3, do not get OTP, prompt to recharge
+        // Check DDB balance against the real price of this job (pages × copies ×
+        // mono/colour rate) before rendering the PDF. Every cover generator here
+        // is exactly one A4 page, so pages defaults to 1. The server re-checks
+        // the hold, but failing here saves a wasted render + upload for a print
+        // we already know cannot be held.
         if (currentAuth && currentAuth.user) {
           var wallet = currentAuth.wallet || { balance: 0, available: 0, reserved: 0 };
           var available = typeof wallet.available === 'number' ? wallet.available : (wallet.balance || 0);
-          if (available < 3) {
+          var needQuote = quote({ pages: opts.pages || 1, copies: opts.copies || 1, color: !!opts.color });
+          var need = needQuote.total;
+          if (available < need) {
             printInFlight = false;
             renderInsufficient({
               available: available,
-              required: 3,
-              reserved: wallet.reserved || 0
+              required: need,
+              reserved: wallet.reserved || 0,
+              pages: needQuote.pages,
+              copies: needQuote.copies,
+              color: !!opts.color
             });
             return null;
           }
@@ -757,7 +766,7 @@
 
         '<div class="wallet-hero">' +
         '<div class="wallet-hero-amount">৳' + have + '</div>' +
-        '<div class="wallet-hero-label">Your Current DDB Balance · Minimum ৳3 required</div>' +
+        '<div class="wallet-hero-label">Your Current DDB Balance · Minimum ৳' + need + ' required</div>' +
         (held ? '<div class="wallet-hero-held">৳' + held + ' is held by unused codes</div>' : '') +
         '</div>' +
 
@@ -766,7 +775,7 @@
         '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>' +
         '<span>Insufficient Balance to get OTP</span>' +
         '</div>' +
-        '<div>Your DDB balance is less than ৳3. Please recharge your DDB balance manually with the admin to generate a kiosk print OTP.</div>' +
+        '<div>Your DDB balance is less than ৳' + need + '. Please recharge your DDB balance manually with the admin to generate a kiosk print OTP.</div>' +
         '</div>' +
 
         '<div class="recharge-contact-group">' +
@@ -774,7 +783,7 @@
 
         '<div class="recharge-buttons-row">' +
         '<a href="' + waUrl + '" target="_blank" rel="noopener noreferrer" class="btn-recharge-action btn-whatsapp" id="btnWaAdmin">' +
-        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.1-.476-.15-.676.15-.2.3-.777.978-.952 1.178-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.15-.175.2-.3.301-.501.1-.2.05-.376-.025-.526-.075-.15-.676-1.63-927-2.232-.244-.585-.493-.506-.676-.515-.175-.01-.376-.01-.576-.01s-.526.075-.802.376c-.276.3-1.053 1.028-1.053 2.507s1.078 2.908 1.228 3.109c.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.378.197 1.897.12.578-.087 1.78-.727 2.03-1.43.25-.702.25-1.303.175-1.43-.075-.125-.276-.2-.576-.35zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.66 1.434 5.176L2 22l4.981-1.39A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2a8.167 8.167 0 0 1-4.17-1.144l-.299-.178-3.093.863.876-3.008-.195-.313A8.163 8.163 0 0 1 3.8 12c0-4.522 3.678-8.2 8.2-8.2s8.2 3.678 8.2 8.2-3.678 8.2-8.2 8.2z"/></svg>' +
+        '<svg width="18" height="18" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.301-.15-1.78-.878-2.056-.978-.276-.1-.476-.15-.676.15-.2.3-.777.978-.952 1.178-.175.2-.351.226-.652.075-.301-.15-1.272-.469-2.423-1.496-.896-.799-1.501-1.786-1.677-2.087-.175-.301-.019-.464.132-.614.135-.135.301-.351.451-.527.15-.175.2-.3.301-.501.1-.2.05-.376-.025-.526-.075-.15-.676-1.63-.927-2.232-.244-.585-.493-.506-.676-.515-.175-.01-.376-.01-.576-.01s-.526.075-.802.376c-.276.3-1.053 1.028-1.053 2.507s1.078 2.908 1.228 3.109c.15.2 2.122 3.24 5.141 4.544.718.31 1.279.496 1.716.635.722.23 1.378.197 1.897.12.578-.087 1.78-.727 2.03-1.43.25-.702.25-1.303.175-1.43-.075-.125-.276-.2-.576-.35zM12 2C6.477 2 2 6.477 2 12c0 1.891.524 3.66 1.434 5.176L2 22l4.981-1.39A9.957 9.957 0 0 0 12 22c5.523 0 10-4.477 10-10S17.523 2 12 2zm0 18.2a8.167 8.167 0 0 1-4.17-1.144l-.299-.178-3.093.863.876-3.008-.195-.313A8.163 8.163 0 0 1 3.8 12c0-4.522 3.678-8.2 8.2-8.2s8.2 3.678 8.2 8.2-3.678 8.2-8.2 8.2z"/></svg>' +
         '<span>WhatsApp Admin</span>' +
         '</a>' +
 

@@ -419,9 +419,17 @@
     return months[m] + ' ' + d + ', ' + y;
   }
 
+  // Local calendar date as YYYY-MM-DD. Never toISOString(): that is UTC, and in
+  // Bangladesh (UTC+6) it is still "yesterday" until 6am local time.
+  function toLocalDateInput(d) {
+    var y = d.getFullYear();
+    var m = String(d.getMonth() + 1).padStart(2, '0');
+    var day = String(d.getDate()).padStart(2, '0');
+    return y + '-' + m + '-' + day;
+  }
+
   function setTodayDate() {
-    var now = new Date();
-    var iso = now.toISOString().split('T')[0];
+    var iso = toLocalDateInput(new Date());
     if (el.submissionDate) {
       el.submissionDate.value = iso;
       updatePreview();
@@ -431,7 +439,7 @@
   function setTomorrowDate() {
     var now = new Date();
     now.setDate(now.getDate() + 1);
-    var iso = now.toISOString().split('T')[0];
+    var iso = toLocalDateInput(now);
     if (el.submissionDate) {
       el.submissionDate.value = iso;
       updatePreview();
