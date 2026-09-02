@@ -21,5 +21,6 @@ serviceAccount*.json
 scripts/_*.html
 scripts/_*.json
 
-# Local editor/tooling state.
+# Local editor/tooling state and test scratch artifacts.
 .claude/settings.local.json
+scratch/

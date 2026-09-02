@@ -1293,21 +1293,76 @@
     }
   }
 
-  /** Trade for an lddb-demo custom token and sign in so writes work seamlessly. */
-  function signInToDataApp() {
-    var bridgeApi = (global.LabDDB && global.LabDDB.api ? global.LabDDB.api('/api/cover-token') : '/api/cover-token');
-    if (!firebase.apps.length && firebaseConfig) firebase.initializeApp(firebaseConfig);
-    
-    return fetch(bridgeApi, { method: 'POST' })
-      .then(function (r) { return r.json(); })
-      .then(function (data) {
-        if (data && data.token && typeof firebase !== 'undefined' && firebase.auth) {
-          return firebase.auth().signInWithCustomToken(data.token);
-        }
-      })
-      .catch(function (err) {
-        console.warn('[admin] background write authorization:', err.message);
-      });
+  /** Trade for an lddb-demo custom token using authenticated LabDDB.auth and sign in so writes work seamlessly. */
+  function checkCatalogueAuth() {
+    var auth = global.LabDDB && global.LabDDB.auth;
+    if (!auth || !auth.isConfigured()) {
+      unlockScreen();
+      return Promise.resolve(null);
+    }
+
+    return auth.whenReady().then(function (state) {
+      if (!state.user) {
+        lockScreen(
+          'Catalogue Admin Sign-in',
+          'Sign in with your authorized LabDDB account to manage courses, students and the catalogue.',
+          'Sign in with Google',
+          function () {
+            auth.openSignIn('Sign in to manage the course catalogue.').then(function (user) {
+              if (user) checkCatalogueAuth();
+            });
+          }
+        );
+        return null;
+      }
+
+      // User is signed in. Acquire custom token via auth.fetch (attaches ID token)
+      return auth.fetch('/api/cover-token', { method: 'POST' })
+        .then(function (data) {
+          if (!firebase.apps.length && firebaseConfig) firebase.initializeApp(firebaseConfig);
+          if (data && data.token && typeof firebase !== 'undefined' && firebase.auth) {
+            return firebase.auth().signInWithCustomToken(data.token);
+          }
+        })
+        .then(function () {
+          unlockScreen();
+        })
+        .catch(function (err) {
+          console.warn('[admin] cover-token auth failed:', err && err.message);
+          if (err && err.status === 403) {
+            lockScreen(
+              'Not Authorised',
+              (state.user.email || 'This account') + ' is signed in, but does not have permission to edit the course catalogue.',
+              'Sign in as someone else',
+              function () {
+                auth.signOut().then(function () {
+                  checkCatalogueAuth();
+                });
+              }
+            );
+          } else if (err && err.status === 401) {
+            lockScreen(
+              'Authentication Required',
+              'Your session expired. Please sign in again.',
+              'Sign in',
+              function () {
+                auth.openSignIn('Sign in again to edit the catalogue.').then(function (user) {
+                  if (user) checkCatalogueAuth();
+                });
+              }
+            );
+          } else {
+            lockScreen(
+              'Could not verify access',
+              (err && err.message) || 'Failed to authenticate with catalogue server.',
+              'Try again',
+              function () {
+                checkCatalogueAuth();
+              }
+            );
+          }
+        });
+    });
   }
 
   // ---- BOOTSTRAP ------------------------------------------------------------
@@ -1324,7 +1379,13 @@
     initEditStudent();
     initBackupRestore();
     initSearch();
-    signInToDataApp();
+
+    if (global.LabDDB && global.LabDDB.auth) {
+      global.LabDDB.auth.onChange(function () {
+        checkCatalogueAuth();
+      });
+    }
+    checkCatalogueAuth();
   }
 
   function init() {

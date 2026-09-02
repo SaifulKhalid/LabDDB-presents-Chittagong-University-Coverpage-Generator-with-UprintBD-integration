@@ -320,19 +320,27 @@
           return null;
         }
 
+        var status = err && err.status;
         var code = err && err.data && err.data.code;
-        if (err && err.status === 402) {
+
+        if (status === 402) {
           renderInsufficient(err.data || {});
           return null;
         }
-        if (err && err.status === 401) {
-          renderError('Your session expired. Please sign in again.', function () {
+        if (status === 401) {
+          renderError('Authentication required. Please sign in again.', function () {
             hide();
             if (a) a.openSignIn('Sign in again to get your kiosk code.');
           }, 'Sign in');
           return null;
         }
-        if (code === 'DUPLICATE') {
+        if (status === 403) {
+          renderError('Access restricted. Your account is not permitted to perform this action.', function () {
+            hide();
+          }, 'Dismiss');
+          return null;
+        }
+        if (status === 409 || code === 'DUPLICATE') {
           renderError(
             'That page was already sent. Check your recent codes rather than paying twice.',
             function () {
@@ -343,11 +351,23 @@
           );
           return null;
         }
-        if (code === 'TOO_MANY_HOLDS') {
-          renderError(err.message, function () {
+        if (status === 429 || code === 'TOO_MANY_HOLDS') {
+          renderError(err.message || 'You have reached the maximum pending print holds.', function () {
             hide();
             if (a) a.openWallet();
           }, 'Manage my codes');
+          return null;
+        }
+        if (status === 400) {
+          renderError(err.message || 'Invalid print request parameters.', function () {
+            requestPrint(opts);
+          }, 'Try again');
+          return null;
+        }
+        if (status === 502 || status === 503 || status === 500) {
+          renderError('Kiosk bridge error: ' + (err.message || 'Service unavailable') + '. Your balance was not charged.', function () {
+            requestPrint(opts);
+          }, 'Retry print');
           return null;
         }
 
@@ -568,13 +588,25 @@
     function openDrawer() {
       renderList();
       syncStatus();
-      if (drawer) drawer.classList.add('show');
-      if (backdrop) backdrop.classList.add('show');
+      if (drawer) {
+        drawer.classList.add('show');
+        drawer.classList.add('active');
+      }
+      if (backdrop) {
+        backdrop.classList.add('show');
+        backdrop.classList.add('active');
+      }
     }
 
     function closeDrawer() {
-      if (drawer) drawer.classList.remove('show');
-      if (backdrop) backdrop.classList.remove('show');
+      if (drawer) {
+        drawer.classList.remove('show');
+        drawer.classList.remove('active');
+      }
+      if (backdrop) {
+        backdrop.classList.remove('show');
+        backdrop.classList.remove('active');
+      }
     }
 
     if (historyBtn) historyBtn.addEventListener('click', openDrawer);
@@ -600,13 +632,16 @@
     }
     // Close on Escape
     document.addEventListener('keydown', function (e) {
-      if (e.key === 'Escape' && overlay && overlay.classList.contains('show')) hide();
+      if (e.key === 'Escape' && overlay && (overlay.classList.contains('show') || overlay.classList.contains('active'))) hide();
     });
   }
 
   function show() {
     if (!overlay) ensureModal();
-    if (overlay) overlay.classList.add('show');
+    if (overlay) {
+      overlay.classList.add('show');
+      overlay.classList.add('active');
+    }
   }
 
   function hide() {
@@ -614,7 +649,10 @@
       clearInterval(countdownTimer);
       countdownTimer = null;
     }
-    if (overlay) overlay.classList.remove('show');
+    if (overlay) {
+      overlay.classList.remove('show');
+      overlay.classList.remove('active');
+    }
   }
 
   function esc(s) {
@@ -914,6 +952,10 @@
     saveToHistory: saveToHistory,
     initHistoryDrawer: initHistoryDrawer,
     initLabDDBToolsSwitcher: initLabDDBToolsSwitcher,
+    renderSuccess: renderSuccess,
+    renderInsufficient: renderInsufficient,
+    renderError: renderError,
+    renderLoading: renderLoading,
   };
 
   global.OtpModal = {

@@ -1207,7 +1207,7 @@
           );
           return;
         }
-        if (!auth.roles.projectAdmin) {
+        if (!auth.roles.projectAdmin && !auth.roles.admin) {
           lockScreen(
             'Not this account',
             auth.user.email + ' is signed in, but the console is restricted to a single ' +
@@ -1264,7 +1264,7 @@
     var lastStateKey = '';
     auth.onChange(function (s) {
       var uid = s.user ? s.user.uid : null;
-      var roleKey = (s.roles && s.roles.projectAdmin) ? 'admin' : 'user';
+      var roleKey = (s.roles && (s.roles.projectAdmin || s.roles.admin)) ? 'admin' : 'user';
       var stateKey = (uid || 'anon') + ':' + roleKey;
       if (stateKey === lastStateKey) return;
       lastStateKey = stateKey;

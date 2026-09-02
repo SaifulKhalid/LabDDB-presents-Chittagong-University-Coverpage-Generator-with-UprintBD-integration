@@ -231,7 +231,13 @@
   function refreshProfile() {
     profilePromise = authedFetch('/api/me')
       .then(function (data) {
-        state.roles = data.roles || state.roles;
+        var roles = (data && data.roles) || {};
+        state.roles = {
+          admin: !!(roles.admin || roles.projectAdmin),
+          projectAdmin: !!(roles.projectAdmin || roles.admin),
+          coverAdmin: !!roles.coverAdmin,
+          disabled: !!roles.disabled,
+        };
         if (!state.walletLoaded && data.wallet) state.wallet = data.wallet;
         if (data.pricing) CFG.pricing = data.pricing;
         if (data.user && data.user.disabled) state.disabled = true;
@@ -445,7 +451,10 @@
   }
 
   function closeSheet(overlay) {
-    if (overlay) overlay.classList.remove('show');
+    if (overlay) {
+      overlay.classList.remove('show');
+      overlay.classList.remove('active');
+    }
   }
 
   function showToast(message, icon) {
@@ -510,6 +519,7 @@
       '<div class="signin-error" id="signInError" hidden></div>';
 
     overlay.classList.add('show');
+    overlay.classList.add('active');
 
     return new Promise(function (resolve) {
       var settled = false;
@@ -852,6 +862,7 @@
     render([], null);
     load();
     overlay.classList.add('show');
+    overlay.classList.add('active');
     card.querySelector('[data-role="close"]').onclick = function () {
       closeSheet(overlay);
     };

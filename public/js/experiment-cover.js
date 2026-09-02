@@ -771,6 +771,8 @@
     var filename = getCoverFilename();
 
     if (el.otpBtn) el.otpBtn.disabled = true;
+    var floatOtp = document.getElementById('floatOtpBtn');
+    if (floatOtp) floatOtp.disabled = true;
 
     Uprint.requestPrint({
       element: el.coverPage,
@@ -789,7 +791,12 @@
       },
     }).then(function (res) {
       if (el.otpBtn) el.otpBtn.disabled = false;
+      if (floatOtp) floatOtp.disabled = false;
       if (res && res.otp) incCoverCounter();
+    }).catch(function (err) {
+      if (el.otpBtn) el.otpBtn.disabled = false;
+      if (floatOtp) floatOtp.disabled = false;
+      console.warn('[experiment-cover] OTP request finished with error:', err && err.message);
     });
   }
 
