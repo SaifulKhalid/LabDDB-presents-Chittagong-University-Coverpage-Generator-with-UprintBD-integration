@@ -35,13 +35,25 @@ const pass = (msg) => console.log(`   ok   ${msg}`);
 // Directory-driven: a file added tomorrow is checked without editing this list.
 console.log('1. JavaScript syntax (node --check):');
 
+function findJsFiles(dir) {
+  const abs = path.join(ROOT, dir);
+  if (!fs.existsSync(abs)) return [];
+  const results = [];
+  const entries = fs.readdirSync(abs, { withFileTypes: true });
+  for (const entry of entries) {
+    const rel = path.join(dir, entry.name).replace(/\\/g, '/');
+    if (entry.isDirectory()) {
+      results.push(...findJsFiles(rel));
+    } else if (entry.isFile() && entry.name.endsWith('.js')) {
+      results.push(rel);
+    }
+  }
+  return results.sort();
+}
+
 const jsTargets = ['server.js'];
 for (const dir of ['lib', 'src', 'scripts', 'public/js']) {
-  const abs = path.join(ROOT, dir);
-  if (!fs.existsSync(abs)) continue;
-  for (const f of fs.readdirSync(abs).sort()) {
-    if (f.endsWith('.js')) jsTargets.push(`${dir}/${f}`);
-  }
+  jsTargets.push(...findJsFiles(dir));
 }
 
 /**

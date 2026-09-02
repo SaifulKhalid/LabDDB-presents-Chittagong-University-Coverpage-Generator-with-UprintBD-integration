@@ -155,17 +155,23 @@
     ].join('\n');
   }
 
+  // Injection is idempotent: the immediate pass runs before the generator
+  // modules cache their DOM elements, so a later DOMContentLoaded pass must
+  // NOT re-inject (innerHTML replacement) — that would destroy the nodes the
+  // generators already bound listeners to, silently breaking the mobile tabs,
+  // theme toggle, history button and bridge badge.
   function injectHeader(options) {
     var opts = options || {};
     var headerEl = document.getElementById('appHeader');
     if (!headerEl) {
       headerEl = document.querySelector('header.app-header');
     }
-    if (!headerEl) return;
+    if (!headerEl || headerEl.getAttribute('data-nav-injected')) return;
 
     var currentPage = opts.active || getCurrentPageName();
     var subtitle = opts.subtitle || PAGE_TITLES[currentPage] || 'Cover Page Generator';
     headerEl.innerHTML = getHeaderHtml(subtitle);
+    headerEl.setAttribute('data-nav-injected', '1');
   }
 
   function injectSidebar(options) {
@@ -174,10 +180,11 @@
     if (!sidebarEl) {
       sidebarEl = document.querySelector('aside.sidebar');
     }
-    if (!sidebarEl) return;
+    if (!sidebarEl || sidebarEl.getAttribute('data-nav-injected')) return;
 
     var currentPage = opts.active || getCurrentPageName();
     sidebarEl.innerHTML = getSidebarHtml(currentPage);
+    sidebarEl.setAttribute('data-nav-injected', '1');
   }
 
   function initNav(options) {

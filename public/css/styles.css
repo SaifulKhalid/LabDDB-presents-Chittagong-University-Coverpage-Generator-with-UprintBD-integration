@@ -3449,7 +3449,7 @@ button {
 @media print {
   @page {
     size: A4 portrait;
-    margin: 8mm;
+    margin: 6mm;
   }
 
   html, body {
@@ -3497,13 +3497,19 @@ button {
   .cover-page-a4,
   .index-page-a4 {
     width: 100% !important;
-    min-height: 275mm !important;
+    height: auto !important;
+    max-height: 280mm !important;
+    min-height: 260mm !important;
+    box-sizing: border-box !important;
     box-shadow: none !important;
     border: 2px solid #003366 !important;
     position: relative !important;
     margin: 0 auto !important;
-    padding: 24px 28px !important;
+    padding: 20px 24px !important;
     page-break-inside: avoid !important;
+    page-break-after: avoid !important;
+    break-inside: avoid !important;
+    break-after: avoid !important;
     -webkit-print-color-adjust: exact !important;
     print-color-adjust: exact !important;
   }
