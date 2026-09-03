@@ -1,61 +1,126 @@
-# Authorization & Role-Based Access Control (RBAC)
+# Authorization Model
 
-## 1. Role Hierarchy
-
-The platform implements 4 distinct privilege levels:
-
-| Role | Target Users | Endpoints Permitted | Enforcing Mechanism |
-| :--- | :--- | :--- | :--- |
-| **Anonymous** | Visitors, public health monitors | `GET /api/health`<br>`GET /api/config` | Public router paths; no auth header required. |
-| **Authenticated Student** | Signed-in students with CU / Google account | `GET /api/me`<br>`POST /api/print`<br>`GET /api/jobs`<br>`POST /api/cancel` | `requireUser()` verifies valid ID token; user must not be disabled. |
-| **Catalogue Admin** | Department heads, course coordinators | `POST /api/cover-token`<br>`admin.html` | Checked against `roles/<uid>/coverAdmin === true` or Project Admin. |
-| **Project Admin** | System owner / institution administrator | `GET/POST /api/admin/*`<br>`console.html` | Hardcoded email match against `ADMIN_EMAIL` (default `htmlwithkhalid@gmail.com`). |
+> **Authoritative reference for access control policy.**  
+> Last updated: 2026-09-03
 
 ---
 
-## 2. Invariant INV-14: Administrative Email Authorization
+## Three Effective Access Levels
 
-Administrative routes under `/api/admin/*` cannot be accessed via role database flags alone. This prevents privilege escalation even if the database permissions were misconfigured.
+The system implements exactly three effective access levels. Authorization is **always resolved server-side**. Client-provided role flags, custom headers, or forged JWT claims are explicitly disregarded.
 
-- The system verifies the authenticated token's `identity.email`.
-- Compares case-insensitively with `env.ADMIN_EMAIL`.
-- Only exact email matches are granted administrative access.
-- Any mismatch yields `403 Forbidden` (`"This area is restricted."`).
+| Level | Identity | Capabilities |
+|---|---|---|
+| `ANONYMOUS` | Unauthenticated visitor | Browse public catalogue, generate cover previews, download PDF (roll NOT persisted across sessions) |
+| `SIGNED_IN_STUDENT` | Any verified Google account | All anonymous capabilities + server-side roll persistence, mint `lddb-demo` custom token, edit the course catalogue |
+| `PROJECT_ADMIN` | `htmlwithkhalid@gmail.com` only | All student capabilities + exclusive access to `/api/admin/*` and the privileged Console |
 
-```javascript
-function isProjectAdmin(identity, adminEmail) {
-  if (!identity || !identity.email || !adminEmail) return false;
-  return identity.email.toLowerCase() === adminEmail.toLowerCase();
-}
+---
+
+## Project Administrator
+
+The project administrator is statically configured via the `ADMIN_EMAIL` server-side environment variable:
+
+```
+htmlwithkhalid@gmail.com
 ```
 
----
+> **This account is the only account with access to the privileged Owner Console and all `/api/admin/*` endpoints.**
 
-## 3. Account Disabling & Ban Policy
+The check is performed server-side in [`token-verifier.js`](../lib/infrastructure/firebase/token-verifier.js) by `requireProjectAdmin()` and `isProjectAdmin()`:
 
-If an account is flagged for abuse (e.g. attempting to submit malformed PDFs or spamming requests):
-
-1. An administrator toggles the user's disabled flag:
-   ```http
-   POST /api/admin/users/flags
-   Content-Type: application/json
-
-   { "uid": "user_123", "disabled": true }
-   ```
-2. The mutation records `disabled: true`, `disabledBy: admin.uid`, and `disabledAt: Date.now()`.
-3. Every subsequent call to `POST /api/print` checks `user.disabled` and rejects immediately with `403 Forbidden`:
-   `"This account has been disabled. Please contact the administrator."`
-4. Active holds for a disabled user remain locked until expired or settled to preserve double-entry accounting integrity.
+- The resolved identity email must **exactly match** `ADMIN_EMAIL` (case-insensitive).
+- The Firebase account must have `emailVerified: true`.
+- A disabled account is rejected with `403 Forbidden`.
+- Client tokens with forged `admin: true` / `projectAdmin: true` / `roles.admin: true` fields are rejected — server identity is always freshly resolved from the Firebase Identity Toolkit.
 
 ---
 
-## 4. Catalogue Token Minting Authorization (Resolving Discrepancy #1)
+## Anonymous (`ANONYMOUS`)
 
-In prior legacy code, `POST /api/cover-token` was open to anonymous visitors. In the rebuilt platform:
+An anonymous visitor may:
 
-- The endpoint checks the caller's identity.
-- Allowed only if:
-  1. Caller is Project Admin (`isProjectAdmin === true`), OR
-  2. Caller has database flag `roles/<uid>/coverAdmin === true`, OR
-  3. Server environment explicitly sets `ALLOW_PUBLIC_CATALOGUE_EDIT=true` (for staging or demo environments).
-- Unauthenticated or unauthorized callers receive `401 Unauthorized` or `403 Forbidden`.
+- Browse the public cover generator at `index.html`, `experiment-cover.html`, `experiment-main-cover.html`
+- Load and read the public course catalogue from `lddb-demo`
+- Enter a roll number into the generator form (held **in-memory only** for the session)
+- Download a PDF cover
+
+An anonymous visitor may **not**:
+
+- Persist their roll number across sessions (no `localStorage`, no server write)
+- Call `POST /api/cover-token` — returns **401 Unauthorized**
+- Call `POST /api/me/roll` — returns **401 Unauthorized**
+- Call `POST /api/activity` — returns **401 Unauthorized**
+- Access any authenticated endpoint
+
+---
+
+## Signed-in Student (`SIGNED_IN_STUDENT`)
+
+Any Google account that signs in via Firebase Authentication becomes a `SIGNED_IN_STUDENT`. There is no allowlist — any verified Google account is a valid student.
+
+A signed-in student may:
+
+- Persist their roll number on the server at `users/<uid>/profile/roll` via `POST /api/me/roll`
+- Retrieve their persisted roll on `GET /api/me` (returned as `user.roll`)
+- Mint a `lddb-demo` custom token with `coverAdmin: true` claim via `POST /api/cover-token`
+- Edit the course catalogue in `admin.html` (create, update, and delete courses, experiments, assignments, students)
+- View their wallet balance, print history, and open jobs
+- Request print OTPs via `POST /api/print`
+
+A signed-in student may **not**:
+
+- Access `/api/admin/*` endpoints — returns **403 Forbidden**
+- View the Owner Console (`console.html`)
+- Perform financial operations (top-up, adjustment) on other accounts
+
+---
+
+## Project Admin (`PROJECT_ADMIN`)
+
+The project admin has all student capabilities, plus:
+
+- Exclusive access to all `/api/admin/*` endpoints
+- Exclusive access to `console.html` (Owner Console)
+- Top-up and adjust any user's wallet
+- Manage print jobs (force-settle, force-expire)
+- View all audit logs and user activity timelines
+- Configure print pricing and limits
+
+---
+
+## Custom Token Minting (`POST /api/cover-token`)
+
+The `lddb-demo` Firebase Realtime Database uses Firebase Security Rules that require the caller to hold a custom token with the `coverAdmin: true` claim to perform writes.
+
+| Caller | Result |
+|---|---|
+| Anonymous (no token) | `401 Unauthorized` |
+| Authenticated student | `200 OK` — custom token with `coverAdmin: true` |
+| Project admin | `200 OK` — custom token with `coverAdmin: true` |
+
+The custom token is minted server-side by `CatalogueService.mintCoverToken()` in [`catalogue-service.js`](../lib/services/catalogue-service.js) using the `LDDB_DEMO_SERVICE_ACCOUNT` service account.
+
+---
+
+## Server-side Roll Persistence
+
+| Scenario | Behavior |
+|---|---|
+| Anonymous visitor enters roll | In-memory only for the session; never written to localStorage or server |
+| User signs out | `labddb_remembered_roll` localStorage key is explicitly purged; `labddb:roll_changed` event dispatched with `{ roll: '' }`; form inputs and previews cleared |
+| User signs in | `GET /api/me` returns `user.roll` from `users/<uid>/profile/roll` |
+| User saves roll while signed in | `POST /api/me/roll` writes to `users/<uid>/profile/roll` and `users/<uid>/roll`; `labddb:roll_changed` dispatched with the new roll |
+
+---
+
+## Audit Script References
+
+| Script | What It Verifies |
+|---|---|
+| [`audit-auth-flow.js`](../scripts/audit-auth-flow.js) | Anonymous 401, expired/malformed token 401, student 200 on cover-token, admin 200 with project admin flag |
+| [`audit-security-auth.js`](../scripts/audit-security-auth.js) | Token verifier edge cases, disabled account handling, RBAC gatekeeping, cross-tenant isolation |
+| [`audit-student-settings-access.js`](../scripts/audit-student-settings-access.js) | Student catalogue access, anonymous rejection, confirmation dialogs, audit hooks |
+| [`audit-roll-persistence.js`](../scripts/audit-roll-persistence.js) | Server-side roll persistence, anonymous rejection, sign-out wipe |
+| [`audit-activity-logging.js`](../scripts/audit-activity-logging.js) | Activity logging, OTP masking, category filtering |
+| [`audit-console-owner-only.js`](../scripts/audit-console-owner-only.js) | Admin endpoint rejection for anonymous/student, forged claim rejection, owner access |

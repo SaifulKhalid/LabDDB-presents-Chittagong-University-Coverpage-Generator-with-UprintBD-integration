@@ -84,16 +84,8 @@
               compress: true,
             });
 
-            // Keep clean margins from all 4 sides of the A4 page (210mm × 297mm)
-            var marginX = 6; // 6mm side margin
-            var pw = 210;
-            var ph = 297;
-            var scaleFactor = (pw - 2 * marginX) / pw;
-            var renderW = pw * scaleFactor;
-            var renderH = ph * scaleFactor;
-            var marginY = (ph - renderH) / 2; // ~8.5mm top/bottom margin for perfect aspect ratio
-
-            pdf.addImage(img, 'JPEG', marginX, marginY, renderW, renderH, undefined, 'FAST');
+            // Exact 1:1 A4 mapping — 12mm margins and double border are built into the canvas
+            pdf.addImage(img, 'JPEG', 0, 0, 210, 297, undefined, 'FAST');
 
             var uri = pdf.output('datauristring'); // data:application/pdf;base64,....
             resolve(uri.split(',').pop());
@@ -639,6 +631,7 @@
   function show() {
     if (!overlay) ensureModal();
     if (overlay) {
+      overlay.hidden = false;
       overlay.classList.add('show');
       overlay.classList.add('active');
     }
@@ -652,6 +645,7 @@
     if (overlay) {
       overlay.classList.remove('show');
       overlay.classList.remove('active');
+      overlay.hidden = true;
     }
   }
 

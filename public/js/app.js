@@ -718,6 +718,14 @@
         if (global.Uprint && global.Uprint.showToast) {
           global.Uprint.showToast('PDF downloaded successfully!', '📄');
         }
+        if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.logActivity) {
+          global.LabDDB.auth.logActivity('PDF_DOWNLOADED', { type: 'cover', id: (current.course && current.course.courseCode) || 'CU' }, {
+            filename: pdfFilename(),
+            courseCode: current.course ? current.course.courseCode : '',
+            roll: el.rollNumber ? el.rollNumber.value.trim() : '',
+            tool: 'assignment-cover',
+          });
+        }
       })
       .catch(function (err) {
         console.error(err);
@@ -732,6 +740,13 @@
   function handleDirectPrint() {
     if (editing) toggleEdit();
     incCoverCounter();
+    if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.logActivity) {
+      global.LabDDB.auth.logActivity('DIRECT_PRINT_INITIATED', { type: 'cover', id: (current.course && current.course.courseCode) || 'CU' }, {
+        courseCode: current.course ? current.course.courseCode : '',
+        roll: el.rollNumber ? el.rollNumber.value.trim() : '',
+        tool: 'assignment-cover',
+      });
+    }
     window.print();
   }
 
@@ -831,8 +846,6 @@
               if (el.rememberRollCheckbox && el.rememberRollCheckbox.checked) {
                 if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
                   global.LabDDB.auth.setRememberedRoll(roll);
-                } else {
-                  localStorage.setItem('labddb_remembered_roll', roll);
                 }
               }
               updatePreview();
@@ -851,22 +864,24 @@
     if (el.rememberRollCheckbox) {
       el.rememberRollCheckbox.addEventListener('change', function () {
         var roll = el.rollNumber ? el.rollNumber.value.trim() : '';
+        var auth = global.LabDDB && global.LabDDB.auth;
         if (this.checked) {
-          if (roll && roll.length >= 3) {
-            if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.setRememberedRoll) {
-              global.LabDDB.auth.setRememberedRoll(roll);
-            } else {
-              localStorage.setItem('labddb_remembered_roll', roll);
-            }
+          if (!auth || !auth.user) {
             if (global.Uprint && global.Uprint.showToast) {
-              global.Uprint.showToast('Roll ' + roll + ' will be remembered.', '✓');
+              global.Uprint.showToast('Sign in to remember roll across devices.', 'ℹ️');
+            }
+            if (auth && auth.openSignIn) {
+              auth.openSignIn('Sign in to remember your roll number across devices.');
+            }
+          } else if (roll && roll.length >= 3) {
+            auth.setRememberedRoll(roll);
+            if (global.Uprint && global.Uprint.showToast) {
+              global.Uprint.showToast('Roll ' + roll + ' saved to your profile.', '✓');
             }
           }
         } else {
-          if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.clearRememberedRoll) {
-            global.LabDDB.auth.clearRememberedRoll();
-          } else {
-            localStorage.removeItem('labddb_remembered_roll');
+          if (auth && auth.clearRememberedRoll) {
+            auth.clearRememberedRoll();
           }
           if (global.Uprint && global.Uprint.showToast) {
             global.Uprint.showToast('Remembered roll cleared.', 'ℹ️');
@@ -1010,7 +1025,7 @@
       ? forcedRoll
       : (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.getRememberedRoll
           ? global.LabDDB.auth.getRememberedRoll()
-          : (localStorage.getItem('labddb_remembered_roll') || ''));
+          : '');
 
     if (el.rememberRollCheckbox) {
       el.rememberRollCheckbox.checked = Boolean(remembered);
@@ -1039,12 +1054,12 @@
         fitPreview();
       });
     } else if (!remembered && typeof forcedRoll === 'string') {
-      if (el.rollNumber && el.rollNumber.value === '') {
-        current.student = null;
-        if (el.studentCardPill) el.studentCardPill.style.display = 'none';
-        setLookupStatus('Enter roll to auto-fill', '');
-        updatePreview();
-      }
+      if (el.rollNumber) el.rollNumber.value = '';
+      if (el.studentName) el.studentName.value = '';
+      current.student = null;
+      if (el.studentCardPill) el.studentCardPill.style.display = 'none';
+      setLookupStatus('Enter roll to auto-fill', '');
+      updatePreview();
     }
   }
 

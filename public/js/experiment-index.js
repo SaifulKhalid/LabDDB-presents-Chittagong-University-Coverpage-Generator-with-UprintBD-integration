@@ -452,6 +452,13 @@
       link.download = filename;
       link.click();
       incCoverCounter();
+      if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.logActivity) {
+        global.LabDDB.auth.logActivity('PDF_DOWNLOADED', { type: 'cover', id: (currentCourse && currentCourse.courseCode) || 'CU' }, {
+          filename: filename,
+          courseCode: (currentCourse && currentCourse.courseCode) || '',
+          tool: 'experiment-index',
+        });
+      }
 
       if (el.pdfBtn) {
         el.pdfBtn.disabled = false;
@@ -473,6 +480,12 @@
   function handlePrint() {
     if (editing) toggleInlineEdit();
     incCoverCounter();
+    if (global.LabDDB && global.LabDDB.auth && global.LabDDB.auth.logActivity) {
+      global.LabDDB.auth.logActivity('DIRECT_PRINT_INITIATED', { type: 'cover', id: (currentCourse && currentCourse.courseCode) || 'CU' }, {
+        courseCode: (currentCourse && currentCourse.courseCode) || '',
+        tool: 'experiment-index',
+      });
+    }
     window.print();
   }
 

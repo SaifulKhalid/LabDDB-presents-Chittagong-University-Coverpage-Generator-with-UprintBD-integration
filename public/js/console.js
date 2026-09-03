@@ -419,6 +419,7 @@
           '<button type="button" class="btn btn-primary btn-xs" data-act="topup">Top up</button>' +
           '<button type="button" class="btn btn-ghost btn-xs" data-act="adjust">Adjust</button>' +
           '<button type="button" class="btn btn-ghost btn-xs" data-act="ledger">Ledger</button>' +
+          '<button type="button" class="btn btn-ghost btn-xs" data-act="timeline">Activity</button>' +
           '<button type="button" class="btn btn-ghost btn-xs" data-act="role">' +
           (u.coverAdmin ? 'Revoke admin' : 'Make admin') + '</button>' +
           '<button type="button" class="btn btn-ghost btn-xs" data-act="disable">' +
@@ -598,6 +599,12 @@
           loaded.ledger = true;
           switchTab('ledger');
           loadLedger();
+        }
+        else if (act === 'timeline') {
+          if ($('userTimelineUid')) $('userTimelineUid').value = user.uid;
+          loaded.audit = true;
+          switchTab('audit');
+          loadUserTimeline(user.uid);
         }
       });
     }
@@ -1028,31 +1035,55 @@
   // ---------------------------------------------------------------------------
   // audit logs (D1 & R2)
   // ---------------------------------------------------------------------------
+  // audit & activity logs (D1 SQL)
+  // ---------------------------------------------------------------------------
   function formatAuditDetails(d) {
     if (!d) return '—';
-    if (typeof d === 'string') return esc(d);
+    if (typeof d === 'string') {
+      try {
+        d = JSON.parse(d);
+      } catch (_) {
+        return esc(d);
+      }
+    }
+    // Deep clone and mask sensitive data (zero OTP exposure invariant)
+    var safe = JSON.parse(JSON.stringify(d));
+    if (safe.otp) safe.otp = '[MASKED]';
+    if (safe.password) delete safe.password;
+    if (safe.token) delete safe.token;
+    if (safe.secret) delete safe.secret;
+
     var parts = [];
-    if (d.amount != null) parts.push('<b>Amount:</b> ' + taka(d.amount));
-    if (d.delta != null) parts.push('<b>Delta:</b> ' + (d.delta > 0 ? '+' : '') + taka(d.delta));
-    if (d.method) parts.push('<b>Method:</b> ' + esc(d.method));
-    if (d.note) parts.push('<b>Note:</b> ' + esc(d.note));
-    if (d.jobId) parts.push('<b>Job:</b> <code class="mono">' + esc(d.jobId) + '</code>');
-    if (d.key) parts.push('<b>Key:</b> ' + esc(d.key));
-    if (d.disabled !== undefined) parts.push('<b>Disabled:</b> ' + d.disabled);
-    if (d.coverAdmin !== undefined) parts.push('<b>CoverAdmin:</b> ' + d.coverAdmin);
-    if (d.pricing) parts.push('<b>Pricing:</b> ' + JSON.stringify(d.pricing));
-    if (d.limits) parts.push('<b>Limits:</b> ' + JSON.stringify(d.limits));
-    if (!parts.length) return esc(JSON.stringify(d));
+    if (safe.courseCode) parts.push('<b>Course:</b> ' + esc(safe.courseCode));
+    if (safe.roll) parts.push('<b>Roll:</b> ' + esc(safe.roll));
+    if (safe.filename) parts.push('<b>File:</b> ' + esc(safe.filename));
+    if (safe.tool) parts.push('<b>Tool:</b> ' + esc(safe.tool));
+    if (safe.amount != null) parts.push('<b>Amount:</b> ' + taka(safe.amount));
+    if (safe.delta != null) parts.push('<b>Delta:</b> ' + (safe.delta > 0 ? '+' : '') + taka(safe.delta));
+    if (safe.pages != null) parts.push('<b>Pages:</b> ' + safe.pages + (safe.copies ? ' × ' + safe.copies : ''));
+    if (safe.price != null) parts.push('<b>Price:</b> ' + taka(safe.price));
+    if (safe.cost != null) parts.push('<b>Cost:</b> ' + taka(safe.cost));
+    if (safe.method) parts.push('<b>Method:</b> ' + esc(safe.method));
+    if (safe.note) parts.push('<b>Note:</b> ' + esc(safe.note));
+    if (safe.jobId) parts.push('<b>Job:</b> <code class="mono">' + esc(safe.jobId) + '</code>');
+    if (safe.disabled !== undefined) parts.push('<b>Disabled:</b> ' + safe.disabled);
+    if (safe.coverAdmin !== undefined) parts.push('<b>CoverAdmin:</b> ' + safe.coverAdmin);
+    if (safe.pricing) parts.push('<b>Pricing:</b> ' + JSON.stringify(safe.pricing));
+    if (safe.limits) parts.push('<b>Limits:</b> ' + JSON.stringify(safe.limits));
+    if (safe.reason) parts.push('<b>Reason:</b> ' + esc(safe.reason));
+    if (safe.error) parts.push('<b>Error:</b> <span style="color:var(--danger,#f43f5e)">' + esc(safe.error) + '</span>');
+    if (!parts.length) return esc(JSON.stringify(safe));
     return parts.join(' | ');
   }
 
   function auditBadge(action) {
-    var act = String(action || '').toLowerCase();
+    var act = String(action || '').toUpperCase();
     var cls = 'badge-muted';
-    if (act.includes('topup')) cls = 'badge-success';
-    else if (act.includes('adjust') || act.includes('refund')) cls = 'badge-info';
-    else if (act.includes('flag') || act.includes('pricing')) cls = 'badge-warn';
-    else if (act.includes('force') || act.includes('expire') || act.includes('cancel')) cls = 'badge-danger';
+    if (act.includes('TOPUP') || act.includes('COMPLETED') || act.includes('CREATED')) cls = 'badge-success';
+    else if (act.includes('ADJUST') || act.includes('REFUND') || act.includes('UPDATED')) cls = 'badge-info';
+    else if (act.includes('FLAG') || act.includes('PRICING') || act.includes('REQUESTED')) cls = 'badge-warn';
+    else if (act.includes('FORCE') || act.includes('EXPIRE') || act.includes('CANCEL') || act.includes('FAILED') || act.includes('DELETED')) cls = 'badge-danger';
+    else if (act.includes('SIGN_IN') || act.includes('SIGN_OUT')) cls = 'badge-info';
     return '<span class="status-badge ' + cls + '">' + esc(action || '—') + '</span>';
   }
 
@@ -1061,10 +1092,12 @@
     var body = $('auditTableBody');
     if (body) body.innerHTML = '<tr><td colspan="6" class="console-empty">Loading audit logs…</td></tr>';
 
+    var categoryFilter = $('auditCategoryFilter') ? $('auditCategoryFilter').value : 'all';
     var actionFilter = $('auditActionFilter') ? $('auditActionFilter').value : '';
     var search = $('auditSearch') ? $('auditSearch').value.trim() : '';
 
     var params = new URLSearchParams();
+    if (categoryFilter && categoryFilter !== 'all') params.set('category', categoryFilter);
     if (actionFilter) params.set('action', actionFilter);
     if (search) params.set('search', search);
 
@@ -1085,12 +1118,13 @@
         }
         body.innerHTML = logs
           .map(function (r) {
+            var target = r.target_uid || '—';
             return (
               '<tr>' +
               '<td>' + when(r.timestamp) + '</td>' +
               '<td>' + auditBadge(r.action) + '</td>' +
               '<td>' + esc(r.actor_email || r.actor_uid || '—') + '</td>' +
-              '<td class="mono">' + esc(r.target_uid || '—') + '</td>' +
+              '<td class="mono">' + esc(target) + '</td>' +
               '<td>' + formatAuditDetails(r.details) + '</td>' +
               '<td class="mono">' + esc(r.ip || '—') + '</td>' +
               '</tr>'
@@ -1104,9 +1138,60 @@
       .then(restore);
   }
 
+  function loadUserTimeline(uid) {
+    var container = $('userTimelineContainer');
+    if (!container) return;
+    var targetUid = (uid || ($('userTimelineUid') && $('userTimelineUid').value.trim()) || '').trim();
+    if (!targetUid) {
+      container.innerHTML = '<p class="console-muted" style="text-align: center; padding: 1.5rem 0;">Enter a UID above or click "History" on any user row in the Users tab.</p>';
+      return;
+    }
+    if ($('userTimelineUid')) $('userTimelineUid').value = targetUid;
+    container.innerHTML = '<p class="console-muted" style="text-align: center; padding: 1.5rem 0;">Loading activity timeline for ' + esc(targetUid) + '…</p>';
+
+    return api('/api/admin/user-history?uid=' + encodeURIComponent(targetUid))
+      .then(function (res) {
+        var list = res.history || [];
+        if (!list.length) {
+          container.innerHTML = '<p class="console-muted" style="text-align: center; padding: 1.5rem 0;">No recorded activity found for ' + esc(targetUid) + '.</p>';
+          return;
+        }
+
+        var html = '<div class="user-timeline" style="display:flex; flex-direction:column; gap:0.75rem; padding: 0.5rem 0;">';
+        list.forEach(function (item) {
+          var meta = item.metadata;
+          if (typeof meta === 'string') {
+            try { meta = JSON.parse(meta); } catch (_) {}
+          }
+          var safeMeta = formatAuditDetails(meta);
+          html +=
+            '<div class="timeline-item" style="display:flex; justify-content:space-between; align-items:flex-start; padding:0.75rem 1rem; border:1px solid rgba(255,255,255,0.08); border-radius:8px; background:rgba(255,255,255,0.02);">' +
+            '  <div>' +
+            '    <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.25rem;">' +
+            '      ' + auditBadge(item.action) +
+            '      <span style="font-size:0.8rem; color:var(--text-muted,#94a3b8);">' + when(item.timestamp) + '</span>' +
+            '    </div>' +
+            '    <div style="font-size:0.875rem; color:var(--text,#e2e8f0);">' + safeMeta + '</div>' +
+            '  </div>' +
+            '  <div style="text-align:right; font-size:0.75rem; color:var(--text-muted,#94a3b8); font-family:monospace;">' +
+            '    ' + esc(item.ip || '—') +
+            '  </div>' +
+            '</div>';
+        });
+        html += '</div>';
+        container.innerHTML = html;
+      })
+      .catch(function (err) {
+        container.innerHTML = '<p class="console-danger" style="text-align: center; padding: 1.5rem 0;">Failed to load user history: ' + esc(err.message) + '</p>';
+      });
+  }
+
   function initAudit() {
     var refresh = $('refreshAuditBtn');
     if (refresh) refresh.addEventListener('click', function () { loadAuditLogs(refresh); });
+
+    var catFilter = $('auditCategoryFilter');
+    if (catFilter) catFilter.addEventListener('change', function () { loadAuditLogs(); });
 
     var filter = $('auditActionFilter');
     if (filter) filter.addEventListener('change', function () { loadAuditLogs(); });
@@ -1117,6 +1202,16 @@
       search.addEventListener('input', function () {
         clearTimeout(timer);
         timer = setTimeout(function () { loadAuditLogs(); }, 350);
+      });
+    }
+
+    var inspectBtn = $('inspectUserTimelineBtn');
+    if (inspectBtn) inspectBtn.addEventListener('click', function () { loadUserTimeline(); });
+
+    var timelineInput = $('userTimelineUid');
+    if (timelineInput) {
+      timelineInput.addEventListener('keydown', function (e) {
+        if (e.key === 'Enter') loadUserTimeline();
       });
     }
   }

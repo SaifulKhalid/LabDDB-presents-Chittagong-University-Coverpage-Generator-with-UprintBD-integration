@@ -111,10 +111,6 @@ function createMockJwt(payload, { header = { alg: 'RS256', typ: 'JWT' }, sig = '
           const { AuthError } = require('../lib/domain/errors.js');
           throw new AuthError('Authentication is required to edit the course catalogue.', 401);
         }
-        if (!isProjectAdmin(identity, env.ADMIN_EMAIL) && !identity.coverAdmin) {
-          const { AuthError } = require('../lib/domain/errors.js');
-          throw new AuthError('You do not have permission to edit the course catalogue.', 403);
-        }
         return { token: 'mock_custom_lddb_demo_token', expiresIn: 3600 };
       },
     };
@@ -197,14 +193,17 @@ function createMockJwt(payload, { header = { alg: 'RS256', typ: 'JWT' }, sig = '
       assert.strictEqual(dataMe.roles.admin, false, 'Student must not have admin role');
       console.log('   ✅ GET /api/me returned projectAdmin: false, admin: false for regular student');
 
-      // Student attempting /api/cover-token without coverAdmin role
+      // Authenticated student calling /api/cover-token receives 200 with coverAdmin token
       const reqCover = new Request('http://localhost/api/cover-token', {
         method: 'POST',
         headers: { Authorization: `Bearer ${studentJwt}` },
       });
       const resCover = await routeRequest(reqCover, ctx);
-      assert.strictEqual(resCover.status, 403, 'Regular student must receive 403 on cover-token');
-      console.log('   ✅ POST /api/cover-token rejected with 403 for unauthorized student');
+      assert.strictEqual(resCover.status, 200, 'Authenticated student must receive 200 on cover-token');
+      const dataCover = await resCover.json();
+      assert.strictEqual(dataCover.ok, true);
+      assert.ok(dataCover.token, 'Must return lddb-demo custom token');
+      console.log('   ✅ POST /api/cover-token returned 200 and custom token for authenticated student');
     }
 
     // 4. Project Admin Authentication (htmlwithkhalid@gmail.com)

@@ -124,6 +124,11 @@ window.addEventListener('DOMContentLoaded', () => {
         courseTitle: 'Organic Synthesis and Spectroscopic Analysis',
       },
     },
+    {
+      name: 'experiment_index',
+      template: path.join(__dirname, '..', 'public', 'experiment-index.html'),
+      data: {},
+    },
   ];
 
   for (const tc of testCases) {

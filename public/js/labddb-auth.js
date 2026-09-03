@@ -106,6 +106,17 @@
         state.wallet = { balance: 0, reserved: 0, available: 0 };
         state.roles = { coverAdmin: false, projectAdmin: false };
         state.walletLoaded = false;
+        try {
+          localStorage.removeItem('labddb_remembered_roll');
+          for (var i = localStorage.length - 1; i >= 0; i--) {
+            var k = localStorage.key(i);
+            if (k && k.indexOf('labddb_user_roll_') === 0) localStorage.removeItem(k);
+          }
+        } catch (_) {}
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: '' } }));
+          window.dispatchEvent(new CustomEvent('labddb:signed_out'));
+        }
         finishReady();
         emit();
         return;
@@ -116,11 +127,18 @@
         email: user.email || '',
         displayName: user.displayName || (user.email || '').split('@')[0],
         photoURL: user.photoURL || '',
+        roll: '',
       };
       attachWallet(user.uid);
       emit();
 
-      // /api/me creates the user + wallet rows on first sight and returns roles.
+      // Audit user sign-in
+      logActivity('USER_SIGN_IN', { type: 'auth', id: user.uid }, {
+        email: user.email || '',
+        provider: (user.providerData && user.providerData[0] && user.providerData[0].providerId) || 'google.com',
+      });
+
+      // /api/me creates the user + wallet rows on first sight and returns roles & saved roll.
       refreshProfile().then(function () {
         finishReady();
       });
@@ -240,7 +258,15 @@
         };
         if (!state.walletLoaded && data.wallet) state.wallet = data.wallet;
         if (data.pricing) CFG.pricing = data.pricing;
-        if (data.user && data.user.disabled) state.disabled = true;
+        if (data.user) {
+          if (state.user) {
+            state.user.roll = data.user.roll || '';
+          }
+          if (data.user.disabled) state.disabled = true;
+          if (data.user.roll && typeof window !== 'undefined' && window.dispatchEvent) {
+            window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: data.user.roll } }));
+          }
+        }
         profilePromise = null;
         emit();
         return data;
@@ -303,7 +329,11 @@
   }
 
   function signOut() {
+    if (state.user) {
+      logActivity('USER_SIGN_OUT', { type: 'auth', id: state.user.uid });
+    }
     detachWallet();
+    clearRememberedRoll();
     if (!fbAuth) return Promise.resolve();
     return fbAuth.signOut();
   }
@@ -433,10 +463,14 @@
   // ---------------------------------------------------------------------------
   function buildSheet(id) {
     var existing = document.getElementById(id);
-    if (existing) return existing;
+    if (existing) {
+      existing.hidden = true;
+      return existing;
+    }
     var overlay = document.createElement('div');
     overlay.className = 'modal-overlay';
     overlay.id = id;
+    overlay.hidden = true;
     overlay.innerHTML =
       '<div class="modal-card account-sheet">' +
       '<div class="modal-head">' +
@@ -454,6 +488,7 @@
     if (overlay) {
       overlay.classList.remove('show');
       overlay.classList.remove('active');
+      overlay.hidden = true;
     }
   }
 
@@ -518,6 +553,7 @@
       '</p>' +
       '<div class="signin-error" id="signInError" hidden></div>';
 
+    overlay.hidden = false;
     overlay.classList.add('show');
     overlay.classList.add('active');
 
@@ -571,48 +607,64 @@
   }
 
   // ---------------------------------------------------------------------------
-  // Remembered Roll Helper
+  // Remembered Roll Helper — Server-Authoritative Persistence
   // ---------------------------------------------------------------------------
   function getRememberedRoll() {
-    try {
-      if (state.user && state.user.uid) {
-        var userRoll = localStorage.getItem('labddb_user_roll_' + state.user.uid);
-        if (userRoll) return userRoll;
-      }
-      return localStorage.getItem('labddb_remembered_roll') || '';
-    } catch (_) {
-      return '';
+    if (state.user && state.user.roll) {
+      return state.user.roll;
     }
+    return '';
   }
 
   function setRememberedRoll(roll) {
     var r = (roll || '').trim();
-    try {
-      if (r) {
-        localStorage.setItem('labddb_remembered_roll', r);
-        if (state.user && state.user.uid) {
-          localStorage.setItem('labddb_user_roll_' + state.user.uid, r);
-        }
-      } else {
-        clearRememberedRoll();
-        return;
-      }
+    if (state.user && state.user.uid) {
+      state.user.roll = r;
+      authedFetch('/api/me/roll', {
+        method: 'POST',
+        body: JSON.stringify({ roll: r }),
+      }).catch(function () {});
       if (typeof window !== 'undefined' && window.dispatchEvent) {
         window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: r } }));
       }
-    } catch (_) {}
+    }
+    // Anonymous visitors: roll is NOT persisted to storage
   }
 
   function clearRememberedRoll() {
+    if (state.user && state.user.uid) {
+      state.user.roll = '';
+      authedFetch('/api/me/roll', {
+        method: 'POST',
+        body: JSON.stringify({ roll: '' }),
+      }).catch(function () {});
+    }
     try {
       localStorage.removeItem('labddb_remembered_roll');
-      if (state.user && state.user.uid) {
-        localStorage.removeItem('labddb_user_roll_' + state.user.uid);
-      }
-      if (typeof window !== 'undefined' && window.dispatchEvent) {
-        window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: '' } }));
+      for (var i = localStorage.length - 1; i >= 0; i--) {
+        var k = localStorage.key(i);
+        if (k && k.indexOf('labddb_user_roll_') === 0) localStorage.removeItem(k);
       }
     } catch (_) {}
+    if (typeof window !== 'undefined' && window.dispatchEvent) {
+      window.dispatchEvent(new CustomEvent('labddb:roll_changed', { detail: { roll: '' } }));
+    }
+  }
+
+  // Activity audit helper
+  function logActivity(action, entity, metadata) {
+    if (!state.user) return Promise.resolve(null);
+    return authedFetch('/api/activity', {
+      method: 'POST',
+      body: JSON.stringify({
+        action: action,
+        entity: entity || null,
+        metadata: metadata || {},
+      }),
+    }).catch(function (err) {
+      console.warn('[labddb-auth] logActivity failed:', err && err.message);
+      return null;
+    });
   }
 
   function deriveStudentSession(id) {
@@ -861,6 +913,7 @@
 
     render([], null);
     load();
+    overlay.hidden = false;
     overlay.classList.add('show');
     overlay.classList.add('active');
     card.querySelector('[data-role="close"]').onclick = function () {
@@ -897,6 +950,7 @@
     getRememberedRoll: getRememberedRoll,
     setRememberedRoll: setRememberedRoll,
     clearRememberedRoll: clearRememberedRoll,
+    logActivity: logActivity,
     get user() {
       return state.user;
     },

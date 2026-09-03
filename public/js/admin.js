@@ -540,6 +540,18 @@
     return { name: name, designation: desig, department: fDept };
   }
 
+  function auditCatalogueAction(action, entity, metadata) {
+    var auth = global.LabDDB && global.LabDDB.auth;
+    if (auth && auth.logActivity) {
+      auth.logActivity(action, entity, metadata);
+    }
+  }
+
+  function getEditorIdentity() {
+    var auth = global.LabDDB && global.LabDDB.auth;
+    return (auth && auth.user && (auth.user.email || auth.user.uid)) || 'authenticated-student';
+  }
+
   // ---- ADD COURSE -----------------------------------------------------------
   function initAddCourse() {
     var container = qs('addFacultyContainer');
@@ -592,10 +604,17 @@
           facultyMembers: facultyList,
           experiments: type === 'lab' ? [{ num: '01', title: 'Introductory Experiment' }] : [],
           updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: getEditorIdentity(),
         };
 
         db.ref('cvr3_courses/' + code).set(payload).then(function () {
           showToast('Course ' + code + ' added successfully!', '✓');
+          auditCatalogueAction('COURSE_CREATED', { type: 'course', id: code }, {
+            courseCode: code,
+            courseTitle: title,
+            department: dept,
+            courseType: type,
+          });
           form.reset();
           container.innerHTML = '';
           container.appendChild(createFacultyRow({ name: '', designation: 'Professor', department: 'Electrical and Electronic Engineering' }));
@@ -736,10 +755,17 @@
           semesterText: sem,
           facultyMembers: facultyList,
           updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: getEditorIdentity(),
         };
 
         db.ref('cvr3_courses/' + currentEditCourseKey).update(updates).then(function () {
           showToast('Course ' + currentEditCourseKey + ' updated!', '✓');
+          auditCatalogueAction('COURSE_UPDATED', { type: 'course', id: currentEditCourseKey }, {
+            courseCode: currentEditCourseKey,
+            courseTitle: title,
+            department: dept,
+            courseType: type,
+          });
         }).catch(function (err) {
           showToast('Update failed: ' + err.message, '❌');
         });
@@ -770,6 +796,11 @@
 
         db.ref('cvr3_courses/' + currentEditCourseKey + '/experiments').set(updatedExps).then(function () {
           showToast('Experiment ' + num + ' added!', '✓');
+          auditCatalogueAction('EXPERIMENT_CREATED', { type: 'experiment', id: num }, {
+            courseCode: currentEditCourseKey,
+            num: num,
+            title: title,
+          });
           addExpForm.reset();
         });
       });
@@ -791,10 +822,17 @@
           assignmentNumber: num,
           assignmentTitle: title,
           submissionDate: date || '',
+          updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: getEditorIdentity(),
         };
 
         db.ref('cvr3_courses/' + currentEditCourseKey + '/assignments/' + assignId).set(payload).then(function () {
           showToast('Assignment ' + num + ' added!', '✓');
+          auditCatalogueAction('ASSIGNMENT_CREATED', { type: 'assignment', id: assignId }, {
+            courseCode: currentEditCourseKey,
+            num: num,
+            title: title,
+          });
           addAssignForm.reset();
         });
       });
@@ -826,11 +864,19 @@
     tbody.querySelectorAll('.delete-exp-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var idx = parseInt(this.getAttribute('data-idx'), 10);
-        var curExps = coursesData[code].experiments || [];
-        curExps.splice(idx, 1);
-        db.ref('cvr3_courses/' + code + '/experiments').set(curExps).then(function () {
-          showToast('Experiment removed', '✓');
-        });
+        var curExps = (coursesData[code] && coursesData[code].experiments) ? [...coursesData[code].experiments] : [];
+        var exp = curExps[idx] || {};
+        var expNum = exp.num || (idx + 1);
+        if (confirm('Delete Experiment ' + expNum + ' from ' + code + '? This affects all users using this course information.')) {
+          curExps.splice(idx, 1);
+          db.ref('cvr3_courses/' + code + '/experiments').set(curExps).then(function () {
+            showToast('Experiment removed', '✓');
+            auditCatalogueAction('EXPERIMENT_DELETED', { type: 'experiment', id: String(expNum) }, {
+              courseCode: code,
+              idx: idx,
+            });
+          });
+        }
       });
     });
   }
@@ -861,17 +907,27 @@
     tbody.querySelectorAll('.delete-assign-btn').forEach(function (btn) {
       btn.addEventListener('click', function () {
         var aId = this.getAttribute('data-id');
-        db.ref('cvr3_courses/' + code + '/assignments/' + aId).remove().then(function () {
-          showToast('Assignment deleted', '✓');
-        });
+        var a = (assignmentsObj && assignmentsObj[aId]) || {};
+        var aNum = a.assignmentNumber || aId;
+        if (confirm('Delete Assignment ' + aNum + ' from ' + code + '? This affects all users using this course information.')) {
+          db.ref('cvr3_courses/' + code + '/assignments/' + aId).remove().then(function () {
+            showToast('Assignment deleted', '✓');
+            auditCatalogueAction('ASSIGNMENT_DELETED', { type: 'assignment', id: aId }, {
+              courseCode: code,
+            });
+          });
+        }
       });
     });
   }
 
   function deleteCourse(code) {
-    if (confirm('Are you sure you want to delete course ' + code + ' from Firebase? This cannot be undone.')) {
+    if (confirm('Delete Course ' + code + '? This affects all users using this course information.')) {
       db.ref('cvr3_courses/' + code).remove().then(function () {
         showToast('Course ' + code + ' deleted!', '✓');
+        auditCatalogueAction('COURSE_DELETED', { type: 'course', id: code }, {
+          courseCode: code,
+        });
         if (currentEditCourseKey === code) {
           currentEditCourseKey = null;
           var form = qs('editCourseForm');
@@ -976,10 +1032,16 @@
         department: dept,
         session: session || deriveSession(roll),
         updatedAt: firebase.database.ServerValue.TIMESTAMP,
+        updatedBy: getEditorIdentity(),
       };
 
       db.ref('students/' + roll).set(payload).then(function () {
         showToast('Student ' + roll + ' saved!', '✓');
+        auditCatalogueAction('STUDENT_CREATED', { type: 'student', id: roll }, {
+          roll: roll,
+          fullName: name,
+          department: dept,
+        });
         form.reset();
         switchTab('viewStudents');
       }).catch(function (err) {
@@ -1076,10 +1138,16 @@
           department: dept,
           session: session,
           updatedAt: firebase.database.ServerValue.TIMESTAMP,
+          updatedBy: getEditorIdentity(),
         };
 
         db.ref('students/' + currentEditStudentKey).update(updates).then(function () {
           showToast('Student profile updated!', '✓');
+          auditCatalogueAction('STUDENT_UPDATED', { type: 'student', id: currentEditStudentKey }, {
+            roll: currentEditStudentKey,
+            fullName: name,
+            department: dept,
+          });
         }).catch(function (err) {
           showToast('Update failed: ' + err.message, '❌');
         });
@@ -1097,9 +1165,12 @@
   }
 
   function deleteStudent(roll) {
-    if (confirm('Delete student ' + roll + ' from database?')) {
+    if (confirm('Delete student ' + roll + '? This affects all users looking up this student.')) {
       db.ref('students/' + roll).remove().then(function () {
         showToast('Student ' + roll + ' deleted', '✓');
+        auditCatalogueAction('STUDENT_DELETED', { type: 'student', id: roll }, {
+          roll: roll,
+        });
         if (currentEditStudentKey === roll) {
           currentEditStudentKey = null;
           var form = qs('editStudentForm');
@@ -1164,9 +1235,14 @@
       btn.addEventListener('click', function () {
         var cKey = this.getAttribute('data-course');
         var aId = this.getAttribute('data-assign');
-        db.ref('cvr3_courses/' + cKey + '/assignments/' + aId).remove().then(function () {
-          showToast('Assignment deleted', '✓');
-        });
+        if (confirm('Delete Assignment from ' + cKey + '? This affects all users using this course information.')) {
+          db.ref('cvr3_courses/' + cKey + '/assignments/' + aId).remove().then(function () {
+            showToast('Assignment deleted', '✓');
+            auditCatalogueAction('ASSIGNMENT_DELETED', { type: 'assignment', id: aId }, {
+              courseCode: cKey,
+            });
+          });
+        }
       });
     });
   }
@@ -1304,11 +1380,11 @@
     return auth.whenReady().then(function (state) {
       if (!state.user) {
         lockScreen(
-          'Catalogue Admin Sign-in',
-          'Sign in with your authorized LabDDB account to manage courses, students and the catalogue.',
+          'Sign in required',
+          'Sign in to add or update courses, assignments, experiments and student information.',
           'Sign in with Google',
           function () {
-            auth.openSignIn('Sign in to manage the course catalogue.').then(function (user) {
+            auth.openSignIn('Sign in to add or update courses, assignments, experiments and student information.').then(function (user) {
               if (user) checkCatalogueAuth();
             });
           }
@@ -1329,24 +1405,13 @@
         })
         .catch(function (err) {
           console.warn('[admin] cover-token auth failed:', err && err.message);
-          if (err && err.status === 403) {
+          if (err && err.status === 401) {
             lockScreen(
-              'Not Authorised',
-              (state.user.email || 'This account') + ' is signed in, but does not have permission to edit the course catalogue.',
-              'Sign in as someone else',
-              function () {
-                auth.signOut().then(function () {
-                  checkCatalogueAuth();
-                });
-              }
-            );
-          } else if (err && err.status === 401) {
-            lockScreen(
-              'Authentication Required',
-              'Your session expired. Please sign in again.',
+              'Sign in required',
+              'Your session expired. Sign in to add or update courses, assignments, experiments and student information.',
               'Sign in',
               function () {
-                auth.openSignIn('Sign in again to edit the catalogue.').then(function (user) {
+                auth.openSignIn('Sign in to add or update courses, assignments, experiments and student information.').then(function (user) {
                   if (user) checkCatalogueAuth();
                 });
               }

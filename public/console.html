@@ -208,15 +208,15 @@
         <div class="console-card-head">
           <h2>Administrative Audit Trail &amp; D1 History</h2>
           <div class="console-head-tools">
-            <select class="form-select console-filter" id="auditActionFilter">
-              <option value="">All actions</option>
-              <option value="topup">Top-ups</option>
-              <option value="adjustment">Adjustments / Refunds</option>
-              <option value="user_flags">User Flag Changes</option>
-              <option value="pricing_change">Pricing Changes</option>
-              <option value="force_settle">Force Settle</option>
-              <option value="force_expire">Force Expire</option>
-              <option value="unmatched_clear">Unmatched Clear</option>
+            <select class="form-select console-filter" id="auditCategoryFilter">
+              <option value="all">All categories</option>
+              <option value="covers">Covers</option>
+              <option value="catalogue">Catalogue edits</option>
+              <option value="printing">Printing</option>
+              <option value="auth">Authentication</option>
+              <option value="financial">Financial</option>
+              <option value="admin">Admin</option>
+              <option value="errors">Errors</option>
             </select>
             <input type="search" class="form-input console-search" id="auditSearch"
                    placeholder="Search email, UID or details…" autocomplete="off" />
@@ -225,8 +225,8 @@
         </div>
         <div class="console-card-body">
           <p class="console-muted console-note">
-            Immutable log stored in <strong>Cloudflare D1 SQL</strong> and cover documents in <strong>Cloudflare R2</strong>.
-            Tracks all admin actions, user account changes, and financial modifications with timestamps and client metadata.
+            Activity and audit stream across all student workflows and administrative functions.
+            Logged events include cover downloads, collaborative catalogue modifications, print lifecycle states, and financial transactions.
           </p>
         </div>
         <div class="console-table-wrap">
@@ -235,8 +235,8 @@
               <tr>
                 <th>Timestamp</th>
                 <th>Action</th>
-                <th>Admin</th>
-                <th>Target UID</th>
+                <th>Actor</th>
+                <th>Target / Resource</th>
                 <th>Details</th>
                 <th>Client IP</th>
               </tr>
@@ -245,6 +245,25 @@
               <tr><td colspan="6" class="console-empty">Loading audit logs…</td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- User Activity Timeline Inspector -->
+      <div class="console-card" style="margin-top: 1.5rem;">
+        <div class="console-card-head">
+          <h2>User Activity Timeline</h2>
+          <div class="console-head-tools">
+            <input type="text" class="form-input" id="userTimelineUid" placeholder="Enter student UID..." style="max-width:280px;" />
+            <button type="button" class="btn btn-secondary btn-sm" id="inspectUserTimelineBtn">Inspect User</button>
+          </div>
+        </div>
+        <div class="console-card-body">
+          <p class="console-muted console-note">
+            Chronological action stream for a specific student account (sign-in, roll updates, cover downloads, prints). OTP codes are masked/redacted.
+          </p>
+          <div id="userTimelineContainer">
+            <p class="console-muted" style="text-align: center; padding: 1.5rem 0;">Enter a UID above or click 'Inspect' to inspect a student account's activity.</p>
+          </div>
         </div>
       </div>
     </section>

@@ -189,6 +189,23 @@ window.addEventListener('DOMContentLoaded', () => {
       },
       script: '',
     },
+
+    // 8. Experiment index
+    {
+      name: '8_experiment_index',
+      template: path.join(__dirname, '..', 'public', 'experiment-index.html'),
+      data: {},
+      script: `
+        const rows = document.getElementById('indexRows');
+        if (rows) {
+          let h = '';
+          for (let i = 1; i <= 8; i++) {
+            h += '<tr><td class="col-no">' + i + '</td><td class="col-name">Experiment ' + i + ' - Measurement and Verification of Laboratory Parameters</td><td class="col-page">' + (i * 3) + '</td></tr>';
+          }
+          rows.innerHTML = h;
+        }
+      `,
+    },
   ];
 
   let allPass = true;
@@ -229,7 +246,7 @@ window.addEventListener('DOMContentLoaded', () => {
 
   console.log('\n------------------------------------------------------------');
   if (allPass) {
-    console.log('ALL 7 PRINT LAYOUT TESTS PASSED (Strictly 1 Page A4, No Spillover) ✅\n');
+    console.log('ALL 8 PRINT LAYOUT TESTS PASSED (Strictly 1 Page A4, No Spillover) ✅\n');
   } else {
     console.error('ONE OR MORE PRINT LAYOUT TESTS FAILED ❌\n');
     process.exit(1);
