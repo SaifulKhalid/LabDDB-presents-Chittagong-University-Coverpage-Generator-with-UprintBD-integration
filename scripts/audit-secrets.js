@@ -6,6 +6,7 @@
 
 'use strict';
 
+const fs = require('fs');
 const { execSync } = require('child_process');
 
 const patterns = [
@@ -25,7 +26,11 @@ const patterns = [
     if (f === '.env.example') continue; // Skip example template with dummy values
     let content = '';
     try {
-      content = execSync(`git show HEAD:"${f}"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      if (fs.existsSync(f)) {
+        content = fs.readFileSync(f, 'utf8');
+      } else {
+        content = execSync(`git show HEAD:"${f}"`, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] });
+      }
     } catch (_) {
       continue;
     }

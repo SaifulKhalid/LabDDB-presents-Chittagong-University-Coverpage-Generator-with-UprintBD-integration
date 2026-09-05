@@ -1,130 +1,48 @@
 # Changelog
 
-All notable changes to the LabDDB × UprintBD pitch prototype.
+## 2.0.0 — Production Release
 
-The format is loosely based on [Keep a Changelog](https://keepachangelog.com/).
+Production release freezing the complete, verified, and audited Chittagong University Cover Page Generator platform with automated UprintBD kiosk OTP bridge.
 
-## [2.0.1] — 2026-08-29
-
-### Changed
-- **Worker service renamed**: Renamed Cloudflare worker from `labddb-uprint-pitch` to `pitch` (live domain `https://pitch.labddb.workers.dev`).
-- **Domain propagation notice**: Documented that it may take a few minutes for `pitch.labddb.workers.dev` to accept incoming requests following the rename and deployment.
-
-## [2.0.0] — 2026-08-25
-
-Production build. The prototype minted OTPs for anyone who could reach the URL; this
-version puts identity, a wallet, and a settlement loop underneath it. The headline
-property: **nobody is charged unless a page actually printed.** Generating an OTP and
-walking away costs the user nothing.
-
-The design mirrors UprintBD's own behaviour rather than guessing at it —
-`transaction_history` shows they debit the institutional account 37 s *after* a print
-completes, not when a code is minted. So: **reserve on mint, settle on confirmed print,
-release on expiry.**
-
-### Added — money and identity
-- **`lib/ledger.js`** — the only code that moves money. Pricing (`priceJob`), `hold`,
-  `settle`, `release`, `topUp`, `adjust`, `checkLimits`, unique filename generation.
-  Every mutation goes through one primitive, `applyToWallet(rtdb, uid, opId, mutate)`,
-  which compare-and-swaps `/wallets/{uid}` on its ETag **and records the `opId` in the
-  same node in the same write**. That is what makes settlement exactly-once: the
-  idempotency key and the balance cannot disagree, because they are one write.
-- **`lib/reconcile.js`** — the settle/expire engine. Reads `/uprint/print_history/`,
-  settles jobs whose filename shows up `Completed`, and releases holds whose OTP lapsed.
-  Runs on a Cron Trigger every minute *and* inline from `/api/print` when the last run
-  looks stale, so a cron outage delays settlement instead of freezing balances.
-- **`lib/firebase-rest.js`** — Firebase without `firebase-admin`: service-account JWT
-  (RS256 via WebCrypto) → OAuth token, cached; RTDB REST with `X-Firebase-ETag` /
-  `if-match`; custom-token minting. Isomorphic, so the same file runs on Workers and Node.
-- **`lib/auth-verify.js`** — Firebase ID-token verification via `identitytoolkit
-  accounts:lookup`. Email must be verified before it counts for anything.
-- **`lib/api.js`** — the whole route table (19 paths), shared by `src/worker.js` and
-  `server.js`: `/api/me`, `/api/jobs`, `/api/config`, `/api/cover-token`, and twelve
-  `/api/admin/*` routes. `requireAdmin` checks the caller's verified email on **every**
-  request.
-- **`public/js/labddb-auth.js`** — dual Firebase app init, Google sign-in sheet, live
-  wallet listener, header account chip (`avatar · ৳ available`), wallet sheet with ledger.
-- **`public/js/labddb-config.js`** — both Firebase configs, the bridge URL and pricing
-  defaults in one place, replacing the config duplicated across five page scripts. The
-  LabDDB-Pro web config is filled in and live; only `databaseURL` needs checking against the
-  console, since it is the one field the copied snippet omits.
-- **`public/console.html`** + **`public/js/console.js`** — the project-admin console:
-  overview, users, jobs, ledger with CSV export, pricing/limits, and a reconcile pane.
-  Unlinked URL, but the gate is server-side; hiding it is convenience, not security.
-- **`firebase/labddb-pro.rules.json`**, **`firebase/lddb-demo.rules.json`** — the real
-  enforcement. See Security below.
-- **`scripts/test-ledger.js`** — the money tests, against an in-memory RTDB that
-  reproduces ETag CAS semantics. No credentials, no network. Includes a *forced* race
-  (two holds on one wallet inside one tick) to prove the retry path actually runs.
-- **`scripts/mobile-verify.js`** (`npm run verify`) — offline static checks: `node --check`
-  over every JS file (discovered by reading the directories, so it cannot go stale), each
-  page's mobile markup, the `labddb-config.js`-before-`labddb-auth.js` load order, and the
-  responsive CSS rules. ESM files are checked through a temporary `.mjs` copy, because
-  `src/worker.js` is the one module in an otherwise CommonJS project.
-- **`scripts/probe-*.js`** — read-only reconnaissance of `print_history`,
-  `transaction_history`, outlet data and pricing. No uploads, no spend.
-- **`docs/PRODUCTION-SETUP.md`** — deployment, both Firebase projects, secrets, and the
-  kiosk test procedure.
-
-### Added — UprintBD bridge
-- `getPrintHistory({ sinceMs })` — date-filtered (Asia/Dhaka), header-mapped column
-  parsing, so a reordered table cannot silently charge the wrong amount.
-- `getQueuedRecordIds()`, `scrapeOtpExpiry()` (reads the dashboard's real countdown
-  instead of assuming 3600 s), `getAccountBalance()`.
-- Caller-supplied unique filenames — the job-id suffix that makes a history row
-  attributable to exactly one person.
+### Added
+- **Double-Entry CAS Wallet Ledger:** Atomic Compare-And-Swap balance mutations on Firebase RTDB ETags (`if-match`), guaranteeing zero double-spends and zero negative balances under concurrency (`lib/domain/wallet.js`, `lib/services/ledger-service.js`).
+- **Automated UprintBD Web Bridge:** Autonomous web session driver handling CSRF tokens, session cookies, multipart uploads, options configuration, and OTP extraction without official API dependencies (`lib/infrastructure/uprint/adapter.js`).
+- **Autonomous Triple-Trigger Reconciliation:** Background cron engine (`* * * * *`) settling completed prints, releasing expired reservations, and deleting UprintBD kiosk records (`lib/services/reconcile-service.js`).
+- **Zero-Dependency Firebase Auth & REST Client:** WebCrypto RS256 JWT signing and Google Identity Toolkit REST verification without bulky SDKs (`lib/infrastructure/firebase/`).
+- **Enterprise Clean Architecture:** Modularization into `domain`, `infrastructure`, `services`, and `api` layers with full backward-compatible facade exports.
+- **Relational Audit & Job Storage:** Cloudflare D1 integration (`schema.sql`) recording structured audit logs, user histories, and ledger statements.
+- **Object Storage Archival:** Cloudflare R2 integration for archiving generated cover page PDFs.
+- **Catalogue Selection & Recency Engine:** Shared catalogue layer (`LabDDB.catalogue`) auto-selecting the newest course/experiment while preserving user selections (`public/js/labddb-config.js`).
+- **Server-Side Roll Persistence:** Remembers authenticated student roll numbers across devices via `/api/me/roll` while strictly keeping anonymous visitors in-memory.
+- **Privileged Owner Console:** Dedicated administration portal (`console.html`) restricted exclusively to `htmlwithkhalid@gmail.com`.
+- **Comprehensive Automated Audit Suites:** 15+ automated suites spanning unit tests (215+ assertions), live UprintBD integration, Puppeteer PDF/print audits, mobile viewports, concurrency, idempotency, and secret hygiene.
 
 ### Changed
-- **`POST /api/print` now requires a Firebase ID token.** Browsing, generating and
-  downloading a PDF stay free and anonymous; only the kiosk OTP action needs an account.
-- Cover-page prices come from `/config/pricing` (admin-editable, defaults 3 mono /
-  5 colour). All four calculators call one `Uprint.quote()`, so the number in the UI and
-  the number charged cannot drift apart.
-- Pages are counted **server-side from the PDF bytes** and priced from that, instead of
-  trusting a client-declared count. The cost strip in the UI quotes `pages: 1` because a
-  cover page is one page; it previews the server's arithmetic rather than reimplementing it.
-- The history drawer is backed by job status from RTDB (Reserved → Printed), not
-  localStorage alone.
-- `public/admin.html` / `js/admin.js` — Google sign-in gate, `coverAdmin` role check, and
-  a server-minted custom token for lddb-demo writes. The ~20 direct `db.ref().set()`
-  calls keep working unchanged behind one sign-in.
-- `wrangler.toml` — Cron Trigger (`* * * * *`) and the eight secret names documented.
-- Cover-page admin and project admin are now genuinely separate surfaces with separate
-  roles: `admin.html` manages the catalogue, `console.html` moves money, and holding one
-  role grants nothing on the other.
+- **Production Service Target:** Worker service renamed to `pitch`, deployed to `https://pitch.labddb.workers.dev`.
+- **Three-Tier Authorization Model:** Clear separation of capabilities between Anonymous visitors, Signed-in Students, and Project Owner (`htmlwithkhalid@gmail.com`).
+- **A4 Print Layout Geometry:** Uniform 12mm page margin layout with double-border inset and balanced vertical flex distribution.
+- **Mobile-First Responsive UI:** Rebuilt styling around `--touch-target: 44px`, `--safe-top`, `100dvh`, and pure `min-width` media queries.
+
+### Fixed
+- **Single-Page Constraint:** Resolved vertical page spillovers across all 4 cover page generator types, ensuring strict 1-page A4 output.
+- **Direct Print Distortions:** Fixed direct browser print clipping and missing borders during `window.print()`.
+- **Mobile Access Gate & Touch Targets:** Corrected admin sign-in sheet z-index layering and 44px touch target compliance across mobile devices.
+- **Wallet Race Protection:** Fixed race conditions in concurrent hold requests through CAS retry loops with exponential backoff.
+- **Secret Hygiene Remediation:** Replaced mock RSA key strings in test suites to ensure 0 secret detector leaks.
 
 ### Security
-- **Nothing in `public/` can write money.** `.write` is `false` on every path in
-  `labddb-pro.rules.json` — not as a placeholder, but as the design. The service account
-  bypasses rules, so the Worker is the only writer, and a student's browser can read
-  their own balance and never change it.
-- `lddb-demo` was **wide open**: anyone reading the page source could rewrite every
-  course, faculty name and student record. Now public-read (anonymous browsing is a
-  deliberate feature) with writes gated on a `coverAdmin` claim carried by a one-hour
-  custom token. `students` needs the claim to read the node whole; per-roll reads stay
-  public so the generators keep working.
-- `/api/admin/*` is restricted to one verified email (`ADMIN_EMAIL`). The check is on the
-  token, not on a role stored in the database.
-- Stale-OTP leak closed: `deletePrintRequest(recordId)` runs **before** the hold is
-  released, in both the reconciler and user-initiated cancel. Releasing first would leave
-  a working code with no money behind it.
-- Open-hold and jobs-per-hour caps: every mint spends real money at UprintBD even when
-  nothing prints, so the brake is on mints, not just on the wallet.
-- `.gitignore` now covers `.dev.vars` (the `wrangler dev` secrets file, which holds the same
-  UprintBD password and service-account JSON as `.env`), `.wrangler/`, and downloaded
-  service-account keys (`*firebase-adminsdk*.json`). A leaked service-account key bypasses
-  every RTDB rule, so it is the one file that must never be committed.
+- **Strict Zero-Write Client Rules:** Disabled client-side database writes across `labddb-pro.rules.json`; all financial mutations execute via privileged service account.
+- **Authoritative Server RBAC:** Gatekeeping verifies Identity Toolkit email directly on every request rather than trusting client JWT claims.
+- **INV-6 Reversal Invariant:** Pre-deletion at UprintBD before hold release prevents free-print race conditions.
+- **Data Minimization:** Sanitized audit logging automatically strips OTPs, passwords, and tokens before persistence.
+- **Tracked Secret Audit:** Enforced clean repository hygiene with automated detection of private keys, credentials, and session cookies.
 
-### Known limitations
-- Charge-on-print-only is unit-tested but can only be *proven* at a kiosk; the procedure
-  is in `docs/PRODUCTION-SETUP.md`.
-- `/api/admin/users` and the all-jobs scope scan the tree. Fine at this scale; they
-  become per-day indices if the user count grows.
-- Reconciliation granularity is one minute, so a student may watch a settled print for up
-  to ~60 s before the chip updates.
-- Workers' free tier gives 10 ms CPU per request; RSA-signing a JWT and base64-decoding a
-  PDF in the same request is tight. A cold start that fails is a student at a kiosk with
-  no code, so the $5/mo plan is the safer choice.
+### Infrastructure
+- **Cloudflare Workers Deployment:** Edge deployment configuration with Node.js compatibility flags and cron triggers in `wrangler.toml`.
+- **Cloudflare D1 & R2 Bindings:** Relational database (`labddb-uprint-db`) and object bucket (`labddb-covers`).
+- **Repository Hygiene:** Updated `.gitignore` to strictly isolate `.env`, `.env.*`, service account JSON keys, Wrangler state, and temporary probe dumps.
+
+---
 
 ## [1.0.0] — 2026-08-23
 

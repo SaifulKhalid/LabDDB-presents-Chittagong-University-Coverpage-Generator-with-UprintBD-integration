@@ -71,5 +71,161 @@
     },
   };
 
+  /**
+   * Catalogue data and selection layer.
+   * Centralizes ordering metadata and default placeholder resolution across all generators.
+   */
+  LabDDB.catalogue = {
+    /**
+     * Determine the latest added course code from a list of candidate codes.
+     * Uses existing creation/ordering metadata:
+     *   1. createdAt (timestamp number)
+     *   2. updatedAt (ServerValue.TIMESTAMP from RTDB writes)
+     *   3. _rawIndex (catalogue/database insertion order)
+     *
+     * @param {string[]} candidateCodes
+     * @param {Object.<string, Object>} coursesMap
+     * @returns {string|null}
+     */
+    getLatestCourse: function (candidateCodes, coursesMap) {
+      if (!Array.isArray(candidateCodes) || candidateCodes.length === 0) {
+        return null;
+      }
+      var map = coursesMap || {};
+      var bestCode = candidateCodes[0];
+      for (var i = 1; i < candidateCodes.length; i++) {
+        var currCode = candidateCodes[i];
+        if (this.compareCoursesRecency(currCode, bestCode, map) > 0) {
+          bestCode = currCode;
+        }
+      }
+      return bestCode;
+    },
+
+    /**
+     * Compares two course codes by recency.
+     * Returns > 0 if codeA is newer than codeB, < 0 if older, 0 if equal.
+     */
+    compareCoursesRecency: function (codeA, codeB, coursesMap) {
+      var a = (coursesMap && coursesMap[codeA]) || {};
+      var b = (coursesMap && coursesMap[codeB]) || {};
+
+      // 1. Explicit creation timestamp (highest priority)
+      var ca = Number(a.createdAt || 0);
+      var cb = Number(b.createdAt || 0);
+      if (ca !== cb) {
+        return ca - cb;
+      }
+
+      // 2. Updated timestamp (set by admin.js on course creation & updates)
+      var ua = Number(a.updatedAt || 0);
+      var ub = Number(b.updatedAt || 0);
+      if (ua !== ub) {
+        return ua - ub;
+      }
+
+      // 3. Database / catalogue key order (appearance order in raw database snapshot)
+      var ia = typeof a._rawIndex === 'number' ? a._rawIndex : -1;
+      var ib = typeof b._rawIndex === 'number' ? b._rawIndex : -1;
+      if (ia !== ib) {
+        return ia - ib;
+      }
+
+      return 0;
+    },
+
+    /**
+     * Determine the latest added experiment for a course.
+     * In the catalogue and admin panel, experiments are stored in an array
+     * where newly added experiments are appended to the end (curExps.concat).
+     * If explicit timestamps exist, the highest timestamp is preferred.
+     *
+     * @param {Array|Object} experiments
+     * @returns {{ index: number, experiment: Object }|null}
+     */
+    getLatestExperiment: function (experiments) {
+      if (!experiments) return null;
+      var list = Array.isArray(experiments) ? experiments : Object.values(experiments);
+      if (list.length === 0) return null;
+
+      var hasTimestamps = list.some(function (e) {
+        return e && (Number(e.createdAt || 0) > 0 || Number(e.updatedAt || 0) > 0);
+      });
+
+      if (hasTimestamps) {
+        var bestIdx = 0;
+        var bestTime = -1;
+        list.forEach(function (e, idx) {
+          if (!e) return;
+          var t = Number(e.createdAt || e.updatedAt || 0);
+          if (t > bestTime) {
+            bestTime = t;
+            bestIdx = idx;
+          }
+        });
+        return {
+          index: bestIdx,
+          experiment: list[bestIdx]
+        };
+      }
+
+      var lastIdx = list.length - 1;
+      return {
+        index: lastIdx,
+        experiment: list[lastIdx]
+      };
+    },
+
+    /**
+     * Resolves which course to select, preserving user manual selection if valid,
+     * otherwise defaulting to the latest added course.
+     *
+     * @param {string[]} candidateCodes
+     * @param {Object.<string, Object>} coursesMap
+     * @param {string|null} userSelectedCode
+     * @returns {string|null}
+     */
+    resolveCourseSelection: function (candidateCodes, coursesMap, userSelectedCode) {
+      if (!Array.isArray(candidateCodes) || candidateCodes.length === 0) {
+        return null;
+      }
+      var map = coursesMap || {};
+      if (userSelectedCode && map[userSelectedCode] && candidateCodes.indexOf(userSelectedCode) !== -1) {
+        return userSelectedCode;
+      }
+      return this.getLatestCourse(candidateCodes, map);
+    },
+
+    /**
+     * Resolves which experiment to select, preserving user manual selection if valid,
+     * otherwise defaulting to the latest added experiment.
+     *
+     * @param {Array|Object} experiments
+     * @param {string|number|null} userSelectedExpIndex
+     * @returns {{ index: number, experiment: Object }|null}
+     */
+    resolveExperimentSelection: function (experiments, userSelectedExpIndex) {
+      if (!experiments) return null;
+      var list = Array.isArray(experiments) ? experiments : Object.values(experiments);
+      if (list.length === 0) return null;
+
+      if (userSelectedExpIndex !== null && userSelectedExpIndex !== undefined && userSelectedExpIndex !== '') {
+        var idx = parseInt(userSelectedExpIndex, 10);
+        if (!isNaN(idx) && idx >= 0 && idx < list.length && list[idx]) {
+          return {
+            index: idx,
+            experiment: list[idx]
+          };
+        }
+      }
+
+      return this.getLatestExperiment(list);
+    }
+  };
+
   global.LabDDB = LabDDB;
-})(window);
+
+  if (typeof module !== 'undefined' && module.exports) {
+    module.exports = LabDDB;
+  }
+})(typeof window !== 'undefined' ? window : (typeof globalThis !== 'undefined' ? globalThis : this));

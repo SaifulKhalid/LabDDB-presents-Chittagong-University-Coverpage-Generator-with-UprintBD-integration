@@ -16,6 +16,7 @@ const suites = [
   'scripts/test-provider.js',
   'scripts/test-reconcile.js',
   'scripts/test-audit.js',
+  'scripts/test-catalogue-defaults.js',
 ];
 
 console.log('============================================================');

@@ -33,6 +33,7 @@
   var studentCache = {};
   var currentScale = 1.0;
   var editing = false;
+  var userSelectedCourse = null;
 
   var current = {
     course: null,
@@ -176,11 +177,10 @@
       localStorage.setItem('cvr3_courses_cache', JSON.stringify(val));
     } catch (_) {}
 
-    var prevSelectedCode = el.courseSelect ? el.courseSelect.value : null;
     courses = {};
     labList = [];
 
-    Object.keys(val).forEach(function (code) {
+    Object.keys(val).forEach(function (code, index) {
       var o = val[code];
       if (!o) return;
 
@@ -195,6 +195,7 @@
 
       courses[code] = {
         _key: code,
+        _rawIndex: index,
         courseCode: o.courseCode || code,
         courseTitle: o.courseTitle || '',
         department: o.department || 'Electrical and Electronic Engineering',
@@ -202,6 +203,8 @@
         facultyMembers: faculty,
         semesterText: o.semesterText || '',
         experiments: exps,
+        updatedAt: o.updatedAt || null,
+        createdAt: o.createdAt || null,
       };
 
       if ((o.courseType || 'lab') === 'lab' || exps.length > 0) {
@@ -210,16 +213,18 @@
     });
 
     labList.sort();
-    populateCourseDropdown(prevSelectedCode);
+    populateCourseDropdown();
   }
 
-  function populateCourseDropdown(preferCode) {
+  function populateCourseDropdown() {
     if (!el.courseSelect) return;
     el.courseSelect.disabled = false;
     el.courseSelect.innerHTML = '';
 
     if (!labList.length) {
       el.courseSelect.innerHTML = '<option value="">No lab courses available</option>';
+      current.course = null;
+      updatePreview();
       return;
     }
 
@@ -236,7 +241,10 @@
       el.courseSelect.appendChild(opt);
     });
 
-    var selectTarget = (preferCode && courses[preferCode]) ? preferCode : labList[0];
+    var selectTarget = (global.LabDDB && global.LabDDB.catalogue)
+      ? global.LabDDB.catalogue.resolveCourseSelection(labList, courses, userSelectedCourse)
+      : (userSelectedCourse && courses[userSelectedCourse] ? userSelectedCourse : (labList.length > 0 ? labList[0] : null));
+
     if (selectTarget) {
       el.courseSelect.value = selectTarget;
       selectCourse(selectTarget);
@@ -764,6 +772,7 @@
   function initEvents() {
     if (el.courseSelect) {
       el.courseSelect.addEventListener('change', function () {
+        userSelectedCourse = this.value || null;
         selectCourse(this.value);
       });
     }

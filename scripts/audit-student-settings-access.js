@@ -32,13 +32,13 @@ function createMockJwt(payload) {
     LABDDB_SERVICE_ACCOUNT: JSON.stringify({
       type: 'service_account',
       project_id: 'labddb-pro',
-      private_key: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD\n-----END PRIVATE KEY-----\n',
+      private_key: 'MOCK_PRIVATE_KEY_FOR_TEST_ONLY',
       client_email: 'test@labddb-pro.iam.gserviceaccount.com',
     }),
     LDDB_DEMO_SERVICE_ACCOUNT: JSON.stringify({
       type: 'service_account',
       project_id: 'lddb-demo',
-      private_key: '-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD\n-----END PRIVATE KEY-----\n',
+      private_key: 'MOCK_PRIVATE_KEY_FOR_TEST_ONLY',
       client_email: 'test@lddb-demo.iam.gserviceaccount.com',
     }),
   };

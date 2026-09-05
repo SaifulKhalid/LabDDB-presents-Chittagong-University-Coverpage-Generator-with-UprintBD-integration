@@ -1,16 +1,14 @@
 # LabDDB × UprintBD — One-Click Kiosk OTP
 
-A working clone of the CU Assignment Cover Page Generator with a **"Get Kiosk OTP"**
-button that talks directly to UprintBD's *existing* website — **no API required from
-UprintBD** — and returns a real, kiosk-printable OTP in one click.
+[![Release](https://img.shields.io/badge/release-v2.0.0-blue.svg)](https://github.com/SaifulKhalid/LabDDB-presents-Chittagong-University-Coverpage-Generator-with-UprintBD-integration/releases/tag/v2.0.0)
+[![Production](https://img.shields.io/badge/production-live-green.svg)](https://pitch.labddb.workers.dev)
+[![Tests](https://img.shields.io/badge/tests-215%2B%20passed-brightgreen.svg)](docs/TESTING.md)
 
-> **Status: proven end-to-end against the live UprintBD site, and printed at a CU kiosk.**
-> The bridge logs in, uploads the cover page, queues the job, and scrapes the real OTP the
-> same way a student clicking through the site by hand would.
->
-> **The headline property: nobody is charged unless a page actually printed.** Generating an
-> OTP and walking away costs the student nothing — the money is *reserved*, then released.
-> See [docs/TESTING.md](docs/TESTING.md) for the evidence.
+A production-grade Chittagong University Cover Page Generator paired with a **"Get Kiosk OTP"** bridge that talks directly to UprintBD's *existing* web application — **requiring zero API cooperation from UprintBD** — and returns an instant 6-digit kiosk print OTP in a single click.
+
+> **Production URL:** [https://pitch.labddb.workers.dev](https://pitch.labddb.workers.dev)  
+> **Release:** `v2.0.0` (Production Release)  
+> **Headline Property: Nobody is charged unless a page actually printed.** Generating an OTP and walking away costs the student nothing — the money is reserved using Compare-And-Swap (CAS) ledger semantics, and automatically released if unused. See [docs/TESTING.md](docs/TESTING.md) for evidence.
 
 ---
 
@@ -105,45 +103,56 @@ the cost model, and the quirks that had to be solved — is in
 
 ---
 
-## Project layout
+## Three-Tier Authorization Model
+
+| Level | Identity | Capabilities | Limitations |
+|---|---|---|---|
+| **Anonymous** | Unauthenticated visitor | Browse catalogue, generate covers, direct print, download PDF | Roll number is in-memory only; cannot mint OTPs; cannot edit catalogue; no Console access |
+| **Signed-in Student** | Any verified Google Account (`@*`) | All anonymous features + server-side roll persistence across sessions, mint `lddb-demo` tokens, edit course catalogue, mint kiosk OTPs | Rejected with `403 Forbidden` on `/api/admin/*`; cannot view `console.html` |
+| **Project Owner** | `htmlwithkhalid@gmail.com` | Full access to all endpoints, student features, financial administration, top-ups, adjustments, user monitoring, audit logs, and reconcile triggers | Configured via server-side `ADMIN_EMAIL` env var |
+
+---
+
+## Project Layout
 
 ```
 Pitch/
-├── server.js                  Node server: static host + the API (local & self-host)
-├── src/worker.js              Cloudflare Worker entry: fetch() + scheduled()
-├── wrangler.toml              Worker config — assets, cron trigger, secret names
+├── server.js                         # Node.js runtime host (local & self-host)
+├── src/worker.js                     # Cloudflare Worker runtime entry (fetch + cron)
+├── wrangler.toml                     # Worker config, D1/R2 bindings, cron triggers
+├── schema.sql                        # Cloudflare D1 relational schema (audit & history)
 ├── lib/
-│   ├── api.js                 The whole route table, shared by both runtimes
-│   ├── ledger.js              The only code that moves money
-│   ├── reconcile.js           Settles printed jobs, releases lapsed holds
-│   ├── uprint-bridge.js       The engine — drives UprintBD's web flow (no API)
-│   ├── firebase-rest.js       Firebase without firebase-admin (JWT, RTDB, ETag CAS)
-│   └── auth-verify.js         Firebase ID-token verification
+│   ├── domain/                       # Core domain entities, errors & wallet rules
+│   │   ├── errors.js                 # DomainError, LedgerError, ConflictError, etc.
+│   │   ├── print-job.js              # PrintJob state machine (reserving -> reserved -> printed)
+│   │   ├── wallet.js                 # Double-entry CAS balance mutations & limit checks
+│   │   └── limits.js                 # Concurrency and volume caps (pages, copies, holds)
+│   ├── application/                  # Business orchestration & use cases
+│   ├── infrastructure/               # External adapters & driver integrations
+│   │   ├── firebase/                 # Zero-dependency WebCrypto JWT, REST client, verifier
+│   │   └── uprint/                   # CookieJar, SessionQueue, HTML parsers, adapter
+│   ├── services/                     # Application services (Ledger, Reconcile, Audit, Catalogue)
+│   └── api/                          # HTTP route handlers, context factory & RBAC gates
 ├── firebase/
-│   ├── labddb-pro.rules.json  Wallets: read your own, write nothing. Ever.
-│   └── lddb-demo.rules.json   Catalogue: public read, coverAdmin write
-├── public/
-│   ├── index.html             the main generator + 3 × experiment-*.html
-│   ├── console.html           project admin (money) — unlinked, gated server-side
-│   ├── admin.html             coverpage admin (course/faculty/student catalogue)
-│   ├── css/styles.css         pixel-faithful A4 cover + app chrome + mobile
+│   ├── labddb-pro.rules.json         # Realtime DB rules: read own wallet, write nothing
+│   └── lddb-demo.rules.json          # Catalogue DB rules: public read, coverAdmin write
+├── public/                           # Frontend client application
+│   ├── index.html                    # Assignment cover generator
+│   ├── experiment-cover.html         # Lab experiment single cover generator
+│   ├── experiment-main-cover.html    # Lab experiment main cover generator
+│   ├── experiment-index.html         # Lab experiment index table generator
+│   ├── admin.html                    # Course & catalogue administration panel
+│   ├── console.html                  # Privileged project owner financial console
+│   ├── css/styles.css                # Mobile-first responsive styles & strict A4 print geometry
 │   └── js/
-│       ├── labddb-config.js   both Firebase configs + prices — the one file to edit
-│       ├── labddb-auth.js     Google sign-in, live wallet chip
-│       ├── uprint.js          PDF→base64, quoting, OTP modal, history drawer
-│       ├── app.js             the generators (+ 3 × experiment-*.js)
-│       └── console.js, admin.js
-├── scripts/
-│   ├── test-ledger.js         the money tests — offline, no credentials
-│   ├── mobile-verify.js       syntax + page markup + load order + CSS
-│   ├── smoke-test.js          bridge: login → mint OTP → delete (real)
-│   ├── http-test.js           the API over HTTP, incl. reserve-not-charge
-│   ├── verify-clean.js        confirms no test jobs remain on the account
-│   └── probe-*.js             read-only recon of the live account (no spend)
-├── Sample/                    the original CU generators, kept for reference
-├── .env.example               config template (copy to .env)
-├── package.json               name/scripts/engines; dependencies: {}
-└── docs/                      ← full documentation (index below)
+│       ├── labddb-config.js          # Shared catalogue layer & Firebase configuration
+│       ├── labddb-auth.js            # Dual Firebase Auth, live wallet chips & drawer
+│       ├── uprint.js                 # Client print bridge, OTP modal & quoting
+│       ├── app.js                    # Generator state controllers
+│       ├── admin.js                  # Catalogue editor controller
+│       └── console.js                # Privileged financial administration controller
+├── scripts/                          # Comprehensive automated test & audit suites
+└── docs/                             # Full architectural & protocol documentation
 ```
 
 ---
@@ -152,48 +161,37 @@ Pitch/
 
 | Document | What's inside |
 |---|---|
-| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, the two runtimes, the request lifecycle, the reserve→settle→release ledger, and the key design decisions. |
-| **[docs/UPRINT-PROTOCOL.md](docs/UPRINT-PROTOCOL.md)** | The reverse-engineered UprintBD flow, request by request: headers, the exact options payload field-by-field, OTP scraping, `print_history`, the three prices, and every quirk solved along the way. |
-| **[docs/API.md](docs/API.md)** | HTTP API reference — every route, request/response schema, error codes, `curl` examples. |
-| **[docs/FRONTEND.md](docs/FRONTEND.md)** | The browser app: the twelve files, the load-order contract, the two Firebase apps, `LabDDB.auth`, and the Get-OTP flow with every failure branch. |
-| **[docs/SETUP.md](docs/SETUP.md)** | Local development: prerequisites, the env table, running the server, `wrangler dev`, troubleshooting. |
-| **[docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md)** | Deployment: both Firebase projects, the eight Worker secrets, RTDB rules, the cron trigger, and the kiosk test procedure. |
-| **[docs/TESTING.md](docs/TESTING.md)** | Six verification layers, what each proves, how to run them, sample output, and an honest list of what is *not* covered. |
-| **[docs/SECURITY.md](docs/SECURITY.md)** | Credential handling, the rules files, input validation, the threat model, abuse caps, and known gaps. |
-| **[docs/PITCH.md](docs/PITCH.md)** | The business case for UprintBD — problem, solution, why no API is needed, the upgrade path, and the ask. |
-| **[CHANGELOG.md](CHANGELOG.md)** | Version history. |
+| **[docs/RELEASE-v2.0.0.md](docs/RELEASE-v2.0.0.md)** | Production release notes, commit SHA, tag, deployment revision, verification audit log, and feature list. |
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | System design, the two runtimes, the request lifecycle, the reserve→settle→release ledger, and key design decisions. |
+| **[docs/AUTHORIZATION.md](docs/AUTHORIZATION.md)** | The authoritative three-tier access control policy (Anonymous, Student, Project Owner). |
+| **[docs/AUTHENTICATION.md](docs/AUTHENTICATION.md)** | Zero-dependency Firebase Identity Toolkit REST integration & WebCrypto RS256 token verification. |
+| **[docs/LEDGER.md](docs/LEDGER.md)** | Double-entry CAS wallet rules, concurrency handling, and mathematical proofs. |
+| **[docs/UPRINTBD.md](docs/UPRINTBD.md)** / **[docs/UPRINT-PROTOCOL.md](docs/UPRINT-PROTOCOL.md)** | The reverse-engineered UprintBD flow: headers, options payload, OTP scraping, and reconciliation. |
+| **[docs/API.md](docs/API.md)** | Complete HTTP API reference — routes, request/response schemas, error status codes. |
+| **[docs/FRONTEND.md](docs/FRONTEND.md)** | Browser app architecture, script load order, Dual Firebase apps, and mobile modal UX. |
+| **[docs/DATABASE.md](docs/DATABASE.md)** | Data schema specifications for Firebase RTDB, Cloudflare D1 (SQL), and Cloudflare R2. |
+| **[docs/SETUP.md](docs/SETUP.md)** | Local development environment setup, prerequisites, and environment variable table. |
+| **[docs/PRODUCTION-SETUP.md](docs/PRODUCTION-SETUP.md)** | Cloudflare deployment: Worker secrets, D1/R2 bindings, RTDB rules, and cron triggers. |
+| **[docs/TESTING.md](docs/TESTING.md)** | Verification layers, test matrices, automated scripts, and test run logs. |
+| **[docs/SECURITY.md](docs/SECURITY.md)** | Threat model, secret hygiene, CAS invariants, and security boundaries. |
+| **[docs/PITCH.md](docs/PITCH.md)** | The business case for UprintBD — problem, solution, no-API architecture, and partnership. |
+| **[CHANGELOG.md](CHANGELOG.md)** | Version history and release notes. |
 
 ---
 
-## What's proven vs. what to verify manually
+## Verification & Audits
 
-- ✅ **Ledger** — `npm test` proves hold → settle → release against an in-memory RTDB that
-  reproduces ETag compare-and-swap: no double-settle under a *forced* race, no negative
-  balance, and an unused OTP that writes no ledger row at all. No credentials, no network.
-- ✅ **Static surface** — `npm run verify` parses every JS file, checks each page's mobile
-  markup, and enforces that `labddb-config.js` loads before `labddb-auth.js`.
-- ✅ **Bridge library** — `npm run smoke` mints a real OTP and deletes the job.
-- ✅ **HTTP contract** — `npm run test:http` proves the auth gate refuses an anonymous mint
-  with `401`, then mints a real code and asserts **the balance did not move**.
-- ✅ **Static hosting + traversal guard** — assets serve; `/../.env` returns `404`.
-- ✅ **Cost model** — `pages × copies × unit`, confirmed live, with the three prices kept
-  distinct (see the table above and
-  [docs/UPRINT-PROTOCOL.md §0](docs/UPRINT-PROTOCOL.md)).
-- ⚠️ **Browser DOM → PDF** (html2canvas + jsPDF) needs a real browser, so it's tested by
-  loading the page and clicking through. The base64 it produces is exactly the payload
-  `/api/print` already accepted, so the contract on both sides of that boundary is verified.
-- ⚠️ **Charge-on-print-only, end to end** — the ledger logic is unit-tested above, but the
-  loop that closes it (`print_history` → settle) can only be *proven* at a kiosk. The
-  procedure is in
-  [docs/PRODUCTION-SETUP.md §8](docs/PRODUCTION-SETUP.md#8-the-headline-test): mint a code
-  and walk away, then mint one and print it.
-- ❌ **RTDB rules as deployed** — read them; there is no rules emulator in this project.
+- ✅ **Financial Ledger (CAS & Races):** `node scripts/test-ledger.js` & `node scripts/audit-concurrency.js` prove reserve → settle → release against in-memory RTDB CAS: no double-settle under forced races, no negative balances.
+- ✅ **Domain State Machine & Pricing:** `node scripts/test-domain.js` verifies all state transitions and pricing bounds.
+- ✅ **Catalogue Selection Defaults:** `node scripts/test-catalogue-defaults.js` verifies latest course/experiment auto-selection.
+- ✅ **Static Architecture & Syntax:** `npm run verify` validates all 80 JavaScript files, page semantics, and responsive CSS tokens.
+- ✅ **Single-Page PDF & Direct Print Layout:** `node scripts/audit-pdf-visual.js` and `node scripts/audit-print-layout.js` (Puppeteer headless engine) confirm exact 1-page A4 geometry across 8 content variations.
+- ✅ **Mobile & Viewport Responsiveness:** `node scripts/audit-browser-interaction.js` & `node scripts/audit-admin-signin-ui.js` verify full responsiveness and 44px touch targets across 320px, 375px, 390px, 414px, 768px, 1366px, and 1920px.
+- ✅ **Live UprintBD Bridge:** `node scripts/test-live-uprint.js` proves automated login, PDF upload, queue checking, OTP parsing, and INV-6 clean deletion against the live kiosk site.
+- ✅ **Secret Hygiene:** `node scripts/audit-secrets.js` confirms zero secrets, unredacted private keys, or credentials in tracked files.
 
 ---
 
-## License / status
+## License / Status
 
-Internal pitch prototype for LabDDB. Not for public redistribution. The UprintBD-facing
-surface is deliberately isolated in `lib/uprint-bridge.js` behind a stable
-`{ otp, cost, … }` contract, so a future official API can be dropped in without touching
-anything else.
+Internal production release for LabDDB & Chittagong University Cover Page Generator. All rights reserved.

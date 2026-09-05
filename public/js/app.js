@@ -35,6 +35,7 @@
   var currentScale = 1.0;
   var editing = false;
   var userTypedCustomDate = false;
+  var userSelectedCourse = null;
 
   var current = {
     course: null,
@@ -183,11 +184,10 @@
       localStorage.setItem('cvr3_courses_cache', JSON.stringify(val));
     } catch (_) {}
 
-    var prevSelectedCode = el.courseSelect ? el.courseSelect.value : null;
     courses = {};
     theoryList = [];
 
-    Object.keys(val).forEach(function (code) {
+    Object.keys(val).forEach(function (code, index) {
       var o = val[code];
       if (!o) return;
 
@@ -201,6 +201,7 @@
 
       courses[code] = {
         _key: code,
+        _rawIndex: index,
         courseCode: o.courseCode || code,
         courseTitle: o.courseTitle || '',
         department: o.department || 'Electrical and Electronic Engineering',
@@ -209,6 +210,7 @@
         semesterText: o.semesterText || '',
         assignments: o.assignments || {},
         updatedAt: o.updatedAt || null,
+        createdAt: o.createdAt || null,
       };
 
       // Populate theory courses or courses containing assignments
@@ -218,10 +220,10 @@
     });
 
     theoryList.sort();
-    populateCourseDropdown(prevSelectedCode);
+    populateCourseDropdown();
   }
 
-  function populateCourseDropdown(desiredCode) {
+  function populateCourseDropdown() {
     if (!el.courseSelect) return;
     el.courseSelect.disabled = false;
     el.courseSelect.innerHTML = '<option value="">Select Course…</option>';
@@ -233,13 +235,11 @@
       el.courseSelect.appendChild(opt);
     });
 
-    // Select previously selected code if still available, else default to first
-    var targetCode = null;
-    if (desiredCode && courses[desiredCode]) {
-      targetCode = desiredCode;
-    } else if (theoryList.length > 0) {
-      targetCode = theoryList[0];
-    }
+    // Select using shared catalogue layer: preserves user manual selection if valid,
+    // otherwise defaults to the newest added course.
+    var targetCode = (global.LabDDB && global.LabDDB.catalogue)
+      ? global.LabDDB.catalogue.resolveCourseSelection(theoryList, courses, userSelectedCourse)
+      : (userSelectedCourse && courses[userSelectedCourse] ? userSelectedCourse : (theoryList.length > 0 ? theoryList[0] : null));
 
     if (targetCode) {
       el.courseSelect.value = targetCode;
@@ -797,6 +797,7 @@
     // Course selection
     if (el.courseSelect) {
       el.courseSelect.addEventListener('change', function () {
+        userSelectedCourse = this.value || null;
         onCourseSelected(this.value);
       });
     }

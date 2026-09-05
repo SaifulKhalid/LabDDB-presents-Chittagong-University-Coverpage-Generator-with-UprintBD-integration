@@ -1433,14 +1433,14 @@ button {
   border: none;
   position: relative;
   margin: 0 auto;
-  padding: 80px 88px;
+  padding: 80px 88px 60px;
   font-family: var(--font-academic);
   line-height: 1.45;
   box-shadow: var(--shadow-paper);
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 /* Outer Border sitting exactly ~12mm (45px) from paper edge */
@@ -1471,14 +1471,14 @@ button {
 
 .cover-header {
   text-align: center;
-  margin-bottom: 0;
+  margin-bottom: 30px;
   flex-shrink: 0;
 }
 
 .cu-crest {
-  width: 72px;
+  width: 74px;
   height: auto;
-  margin: 0 auto 8px;
+  margin: 0 auto 9px;
   display: block;
 }
 
@@ -1486,19 +1486,19 @@ button {
   font-size: 14pt;
   font-weight: 400;
   margin-bottom: 3px;
-  line-height: 1.3;
+  line-height: 1.25;
 }
 
 .cover-university {
   font-size: 16pt;
   font-weight: 700;
   letter-spacing: 0.5px;
-  line-height: 1.25;
+  line-height: 1.2;
 }
 
 .cover-title-block {
   text-align: center;
-  margin: 6px 0;
+  margin: 0 0 30px 0;
   flex-shrink: 0;
 }
 
@@ -1517,12 +1517,12 @@ button {
   width: 100%;
   border-collapse: collapse;
   border: 1.4px solid #111111;
-  margin: 4px 0;
-  flex-shrink: 1;
+  margin: 0 0 30px 0;
+  flex-shrink: 0;
 }
 
 .cover-table td {
-  padding: 6px 12px;
+  padding: 7px 12px;
   border: 1px solid #111111;
   font-size: 11pt;
   vertical-align: middle;
@@ -1544,8 +1544,12 @@ button {
 }
 
 .submitted-section {
-  margin: 4px 0;
+  margin: 0 0 30px 0;
   flex-shrink: 0;
+}
+
+.submitted-section:last-child {
+  margin-bottom: 0;
 }
 
 .submitted-section .cover-table {
@@ -1575,7 +1579,7 @@ button {
 
 .faculty-block {
   font-size: 11pt;
-  line-height: 1.4;
+  line-height: 1.45;
   color: #111111;
   text-align: center;
   margin: 0 auto;
@@ -1585,9 +1589,9 @@ button {
 .student-table td.student-info,
 .student-info {
   font-size: 11pt;
-  line-height: 1.55;
+  line-height: 1.5;
   text-align: left;
-  padding: 8px 14px;
+  padding: 10px 14px;
 }
 
 /* Index Page A4 Document */
@@ -3574,10 +3578,10 @@ button {
     border: none !important;
     position: relative !important;
     margin: 0 !important;
-    padding: 22mm 24mm !important;
+    padding: 21mm 24mm 16mm !important;
     display: flex !important;
     flex-direction: column !important;
-    justify-content: space-between !important;
+    justify-content: flex-start !important;
     page-break-inside: avoid !important;
     page-break-after: avoid !important;
     page-break-before: avoid !important;
@@ -3621,40 +3625,40 @@ button {
   }
 
   .cover-header {
-    margin: 0 0 6px 0 !important;
+    margin: 0 0 8mm 0 !important;
     text-align: center !important;
     flex-shrink: 0 !important;
   }
 
   .cu-crest {
-    width: 66px !important;
+    width: 74px !important;
     height: auto !important;
-    margin: 0 auto 6px !important;
+    margin: 0 auto 9px !important;
     display: block !important;
   }
 
   .cover-department {
-    font-size: 13pt !important;
-    margin-bottom: 2px !important;
+    font-size: 14pt !important;
+    margin-bottom: 3px !important;
     line-height: 1.25 !important;
   }
 
   .cover-university {
-    font-size: 15.5pt !important;
+    font-size: 16pt !important;
     font-weight: 700 !important;
     line-height: 1.2 !important;
   }
 
   .cover-title-block {
-    margin: 6px 0 !important;
+    margin: 0 0 8mm 0 !important;
     text-align: center !important;
     flex-shrink: 0 !important;
   }
 
   .cover-title {
-    font-size: 16pt !important;
+    font-size: 17.5pt !important;
     font-weight: 700 !important;
-    padding: 3px 24px !important;
+    padding: 3.5px 28px !important;
     border-top: 2px solid #003366 !important;
     border-bottom: 2px solid #003366 !important;
     display: inline-block !important;
@@ -3666,20 +3670,24 @@ button {
     width: 100% !important;
     border-collapse: collapse !important;
     border: 1.4px solid #111111 !important;
-    margin: 5px 0 !important;
-    flex-shrink: 1 !important;
+    margin: 0 0 8mm 0 !important;
+    flex-shrink: 0 !important;
   }
 
   .cover-table td {
-    padding: 5px 10px !important;
-    font-size: 10.5pt !important;
+    padding: 7px 12px !important;
+    font-size: 11pt !important;
     border: 1px solid #111111 !important;
     line-height: 1.35 !important;
   }
 
   .submitted-section {
-    margin: 4px 0 !important;
+    margin: 0 0 8mm 0 !important;
     flex-shrink: 0 !important;
+  }
+
+  .submitted-section:last-child {
+    margin-bottom: 0 !important;
   }
 
   .submitted-section .cover-table {
@@ -3691,15 +3699,15 @@ button {
   }
 
   .faculty-block {
-    font-size: 10pt !important;
-    line-height: 1.35 !important;
+    font-size: 11pt !important;
+    line-height: 1.45 !important;
     text-align: center !important;
   }
 
   .student-info {
-    font-size: 10pt !important;
-    line-height: 1.4 !important;
-    padding: 6px 12px !important;
+    font-size: 11pt !important;
+    line-height: 1.5 !important;
+    padding: 10px 14px !important;
   }
 
   /* Index Page specific print layout */

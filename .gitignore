@@ -1,6 +1,9 @@
 .env
+.env.*
+!.env.example
 node_modules/
 *.log
+*.tmp
 
 # Worker secrets for `wrangler dev` — same values as .env (UprintBD password,
 # service-account JSON). SETUP.md tells you to create this; never commit it.
@@ -24,3 +27,5 @@ scripts/_*.json
 # Local editor/tooling state and test scratch artifacts.
 .claude/settings.local.json
 scratch/
+.DS_Store
+Thumbs.db
