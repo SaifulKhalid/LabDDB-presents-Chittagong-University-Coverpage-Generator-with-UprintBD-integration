@@ -2,7 +2,9 @@
 
 **Release:** v2.0.0  
 **Production URL:** https://pitch.labddb.workers.dev  
-**Tag:** v2.0.0  
+**Commit:** `eabb0c4352135c301686e27f5a4e65dc468b6aaa`  
+**Tag:** `v2.0.0`  
+**Deployment Revision / Version ID:** `ee7a0868-72f8-4580-9b1b-569e51869709`  
 **Status:** PRODUCTION RELEASE COMPLETE — v2.0.0  
 **Target Repository:** https://github.com/SaifulKhalid/LabDDB-presents-Chittagong-University-Coverpage-Generator-with-UprintBD-integration  
 
